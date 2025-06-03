@@ -213,13 +213,35 @@
       width: 100%;
     }
 
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: linear-gradient(to right, #121f32, var(--sponge-blue));
+      border-radius: 5px;
+      outline: none;
+      transition: background 0.3s;
+    }
+    
+    input[type="range"]:hover {
+      background: linear-gradient(to right, #121f32, var(--sponge-yellow));
+    }
+
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: var(--sponge-blue);
+      background: var(--sponge-yellow);
       cursor: pointer;
+      border: 1px solid var(--sponge-blue);
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--sponge-blue);
+      transform: scale(1.1);
     }
 
     input[type="color"] {
@@ -238,22 +260,31 @@
       font-size: 0.8em;
       white-space: nowrap;
     }
-    
-    .position-controls {
+      .position-controls {
       display: grid;
       grid-template-columns: auto 1fr;
       gap: 5px 10px;
       align-items: center;
       margin-top: 5px;
+      background: rgba(18, 31, 50, 0.1);
+      border-radius: 5px;
+      padding: 8px;
+      border: 1px solid rgba(0, 112, 187, 0.2);
     }
-    
-    .position-label {
-      font-size: 0.8em;
+      .position-label {
+      font-size: 0.85em;
       white-space: nowrap;
+      color: var(--ocean-dark);
+      font-weight: 500;
     }
     
     .position-value {
-      font-size: 0.7em;
+      font-size: 0.75em;
+      background: rgba(255, 216, 0, 0.1);
+      padding: 2px 5px;
+      border-radius: 3px;
+      min-width: 38px;
+      text-align: center;
       color: #78909C;
       text-align: right;
       padding-right: 5px;
@@ -483,12 +514,12 @@
         <hr style="border: none; border-top: 1px solid var(--ocean-light); margin: 8px 0;">        <div class="position-controls">
           <span class="position-label">Horizontal:</span>
           <div style="display: flex; align-items: center; gap: 5px;">
-            <input type="range" id="textPositionX" min="0" max="100" step="5" value="50">
+            <input type="range" id="textPositionX" min="0" max="100" step="1" value="50">
             <span class="position-value" id="textPositionXValue">50%</span>
           </div>
           <span class="position-label">Vertical:</span>
           <div style="display: flex; align-items: center; gap: 5px;">
-            <input type="range" id="textPositionY" min="0" max="100" step="5" value="50">
+            <input type="range" id="textPositionY" min="0" max="100" step="1" value="50">
             <span class="position-value" id="textPositionYValue">50%</span>
           </div>
           <span class="position-label">Text Align:</span>          <div style="display: flex; gap: 5px;">
@@ -593,26 +624,62 @@
       // Function to update the text displayed in the time card
     function updateText(text) {
       timeCard.textContent = text || 'The Next Day...';
-    }
-      // Function to update text position in the time card
+    }    // Function to update text position in the time card
     function updateTextPosition(xPos = 50, yPos = 50, textAlign = null) {
-      // Convert percentage to CSS values
-      const x = xPos;
-      const y = yPos;
+      // Use precise values for smoother movement
+      const x = Number(xPos);
+      const y = Number(yPos);
       
-      // Update display
-      timeCard.style.alignItems = y === 50 ? 'center' : (y < 50 ? 'flex-start' : 'flex-end');
-      timeCard.style.justifyContent = x === 50 ? 'center' : (x < 50 ? 'flex-start' : 'flex-end');
+      // More granular position calculations for smoother movement
+      // Instead of just using flex-start/center/flex-end, we'll use percentage values
+      timeCard.style.display = 'flex';
+      timeCard.style.flexDirection = 'column';
+      timeCard.style.justifyContent = 'center'; // Reset to default
+      timeCard.style.alignItems = 'center'; // Reset to default
+      
+      // Calculate text position using transform instead of flex alignment
+      // This allows for more precise positioning
+      const textWrapper = document.querySelector('.text-wrapper') || document.createElement('div');
+      if (!textWrapper.classList.contains('text-wrapper')) {
+        textWrapper.className = 'text-wrapper';        textWrapper.style.position = 'relative';
+        textWrapper.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        
+        // Move the text content to the wrapper if needed
+        if (timeCard.childNodes.length && timeCard.childNodes[0].nodeType === Node.TEXT_NODE) {
+          const textContent = timeCard.textContent;
+          timeCard.textContent = '';
+          textWrapper.textContent = textContent;
+          timeCard.appendChild(textWrapper);
+        } else if (!timeCard.contains(textWrapper)) {
+          textWrapper.textContent = timeCard.textContent || 'The Next Day...';
+          timeCard.textContent = '';
+          timeCard.appendChild(textWrapper);
+        }
+      }
+        // Calculate position as percentage from center (0,0 is center)
+      // Use a non-linear scale for more natural movement that accelerates toward the edges
+      // This gives more precise control in the center where it's needed most
+      const normalizedX = (x - 50) / 50; // -1 to 1 range
+      const normalizedY = (y - 50) / 50; // -1 to 1 range
+      
+      // Apply a subtle easing function for more natural movement
+      // This gives finer control in the middle and more movement at the edges
+      const easeX = normalizedX * (0.9 + Math.abs(normalizedX) * 0.4);
+      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 0.4);
+      
+      // Scale to desired range (±80%)
+      const translateX = easeX * 80; 
+      const translateY = easeY * 80;
+      
+      // Apply transform to move text with precise decimal values
+      textWrapper.style.transform = `translate(${translateX.toFixed(2)}%, ${translateY.toFixed(2)}%)`;
       
       // Add padding to prevent text from touching edges
-      const paddingX = Math.min(Math.max(x === 50 ? 20 : (x < 50 ? x : 100 - x) / 2, 5), 20);
-      const paddingY = Math.min(Math.max(y === 50 ? 20 : (y < 50 ? y : 100 - y) / 2, 5), 20);
-      
-      timeCard.style.padding = `${paddingY}px ${paddingX}px`;
+      timeCard.style.padding = '20px'; // Consistent padding
       
       // Set text alignment if provided
       if (textAlign) {
-        timeCard.style.textAlign = textAlign;
+        textWrapper.style.textAlign = textAlign;
         
         // Update active state of alignment buttons
         if (el('btnAlignLeft')) el('btnAlignLeft').classList.toggle('active', textAlign === 'left');
@@ -628,22 +695,32 @@
       const indicator = document.querySelector('.position-indicator') || document.createElement('div');
       if (!indicator.classList.contains('position-indicator')) {
         indicator.className = 'position-indicator';
-        indicator.style.position = 'absolute';
-        indicator.style.width = '10px';
-        indicator.style.height = '10px';
+        indicator.style.position = 'absolute';        indicator.style.width = '8px';
+        indicator.style.height = '8px';
         indicator.style.borderRadius = '50%';
-        indicator.style.backgroundColor = 'rgba(255, 216, 0, 0.7)';
+        indicator.style.backgroundColor = 'rgba(255, 216, 0, 0.6)';
         indicator.style.border = '1px solid rgba(0, 112, 187, 0.7)';
+        indicator.style.transform = 'translate(-50%, -50%)'; // Center the indicator on the point
         indicator.style.pointerEvents = 'none'; // Don't interfere with clicks
         indicator.style.zIndex = '1000';
-        indicator.style.boxShadow = '0 0 5px rgba(0, 0, 0, 0.5)';
+        indicator.style.boxShadow = '0 0 3px rgba(0, 0, 0, 0.3)';        indicator.style.opacity = '0.7';
+        indicator.style.transition = 'left 0.15s cubic-bezier(0.25, 0.1, 0.25, 1), top 0.15s cubic-bezier(0.25, 0.1, 0.25, 1)';
         indicator.dataset.isPositionIndicator = 'true'; // Mark for html2canvas to ignore
         timeCard.appendChild(indicator);
-      }
+      }      // Position the indicator at the center of the text
+      // Use the same x,y values directly from the sliders for consistent feedback
+      // No need to subtract half width/height since we're using transform: translate(-50%, -50%)
+      indicator.style.left = `${x}%`;
+      indicator.style.top = `${y}%`;
       
-      // Position the indicator at the center
-      indicator.style.left = `calc(${x}% - 5px)`;
-      indicator.style.top = `calc(${y}% - 5px)`;
+      // Pulse effect when position changes significantly
+      indicator.animate([
+        { transform: 'scale(1.5)', opacity: '0.9' },
+        { transform: 'scale(1)', opacity: '0.7' }
+      ], {
+        duration: 300,
+        easing: 'ease-out'
+      });
     }
 
     // Function to fill phrase dropdown menu
@@ -1012,12 +1089,30 @@
       // Initialize text position
       updateTextPosition(50, 50);
         // Text position controls
+      let positionUpdateTimeout;
+      
       el('textPositionX').addEventListener('input', function() {
-        updateTextPosition(parseInt(this.value), parseInt(el('textPositionY').value), timeCard.style.textAlign);
+        // Clear any pending updates
+        clearTimeout(positionUpdateTimeout);
+        
+        // Get values directly from sliders - no need to parse if step is 1
+        const xPos = Number(this.value);
+        const yPos = Number(el('textPositionY').value);
+        
+        // Update immediately for responsive feel
+        updateTextPosition(xPos, yPos, timeCard.style.textAlign);
       });
       
       el('textPositionY').addEventListener('input', function() {
-        updateTextPosition(parseInt(el('textPositionX').value), parseInt(this.value), timeCard.style.textAlign);
+        // Clear any pending updates
+        clearTimeout(positionUpdateTimeout);
+        
+        // Get values directly from sliders - no need to parse if step is 1
+        const xPos = Number(el('textPositionX').value);
+        const yPos = Number(this.value);
+        
+        // Update immediately for responsive feel
+        updateTextPosition(xPos, yPos, timeCard.style.textAlign);
       });
       
       // Text alignment controls
