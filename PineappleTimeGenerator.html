@@ -327,8 +327,75 @@
     footer a {
       color: #4FC3F7;
       text-decoration: none;
+    }    .btn-save-favorite {
+      background-color: var(--seaweed-green);
+      margin-left: 5px;
     }
-
+    
+    .favorites-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border-radius: 5px;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+    
+    .favorite-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid var(--ocean-light);
+      transition: all 0.2s;
+    }
+    
+    .favorite-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .favorite-name {
+      flex-grow: 1;
+      margin-right: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .favorite-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .btn-load-favorite, .btn-delete-favorite {
+      padding: 3px 8px;
+      font-size: 0.8em;
+    }
+    
+    .btn-load-favorite {
+      background-color: var(--sponge-blue);
+    }
+    
+    .btn-delete-favorite {
+      background-color: var(--patrick-pink);
+    }
+    
+    .no-favorites {
+      padding: 10px;
+      text-align: center;
+      color: #78909C;
+      font-style: italic;
+      font-size: 0.9em;
+    }
+    
+    .favorite-thumbnail {
+      width: 30px;
+      height: 20px;
+      border-radius: 3px;
+      margin-right: 8px;
+      background-size: cover;
+      background-position: center;
+    }
+    
     @media (min-width: 500px) {
       .color-controls-wrapper {
         display: flex;
@@ -351,11 +418,11 @@
       <div id="ratio-indicator">FORMAT 16:9</div>
     </div>
     
-    <div class="compact-controls">
-      <div class="tabs">
+    <div class="compact-controls">      <div class="tabs">
         <div class="tab active" data-tab="basic">Text & Quick Phrases</div>
         <div class="tab" data-tab="style">Style</div>
         <div class="tab" data-tab="backgrounds">Backgrounds</div>
+        <div class="tab" data-tab="favorites">Favorites</div>
       </div>
       
       <!-- Basic Tab (Text & Quick Phrases) -->
@@ -392,8 +459,7 @@
           <button id="btnRandomColors" class="btn-colors btn-small">Random Colors</button>
         </div>
       </div>
-      
-      <!-- Backgrounds Tab -->
+        <!-- Backgrounds Tab -->
       <div class="tab-content" id="tab-backgrounds">
         <div class="thumbnails-row" id="backgroundThumbnails"></div>
         <div class="control-row">
@@ -401,6 +467,17 @@
             Upload background
           </label>
           <input id="imageUpload" type="file" accept="image/*">
+        </div>
+      </div>
+      
+      <!-- Favorites Tab -->
+      <div class="tab-content" id="tab-favorites">
+        <div class="control-row">
+          <input type="text" id="favoriteName" placeholder="Name your favorite preset...">
+          <button id="btnSaveFavorite" class="btn-save-favorite">Save Current</button>
+        </div>
+        <div id="favoritesList" class="favorites-list">
+          <p class="no-favorites">No favorites saved yet. Create your design and save it!</p>
         </div>
       </div>
       
@@ -413,8 +490,7 @@
   </div>    <footer>
         Made with ❤️ by <a href="" target="_blank">m3m3nt0</a>
     </footer>
-  <script>
-    // Array of time card phrases
+  <script>    // Array of time card phrases
     const phrases = [
       "3 Days Later...", "2000 Years Later", "6½ Hours Later", "A Few Inches Later", "Day Two", "Day Three", "Day Four",
       "A Few Moments Later", "One Eternity Later", "Three Days Later", "Twelve Seconds Later", "3:28 AM", "Three Weeks Later",
@@ -424,6 +500,9 @@
       "Six Hours Later", "Several Bad Puns Later", "70 Years Later", "Later That Same Evening", "Several Days Later",
       "6 Months Later...", "4 to 6 Weeks Later", "One Minute, Thirty Seven Seconds Later"
     ];
+    
+    // Key for storing favorites in localStorage
+    const FAVORITES_KEY = 'pineappleTimeGeneratorFavorites';
     
     // Helper function to get elements by ID
     const el = id => document.getElementById(id);
@@ -581,12 +660,226 @@
       
       return color;
     }
+      // Function to save current settings as a favorite
+    function saveCurrentAsFavorite(name) {
+      if (!name || name.trim() === '') {
+        alert('Please enter a name for your favorite preset');
+        return;
+      }
+      
+      // Get current active background
+      const activeThumb = document.querySelector('.thumbnail.active');
+      if (!activeThumb) return;
+      
+      const backgroundIndex = parseInt(activeThumb.dataset.index);
+      const backgroundUrl = backgrounds[backgroundIndex].url;
+      
+      // Get current text
+      const text = timeCard.textContent;
+      
+      // Get current style settings
+      const fontSize = el('fontSize').value;
+      const textColor = el('fontColor').value;
+      const shadowColor = el('shadowColor').value;
+      const aspectRatio = is16by9 ? '16:9' : '4:3';
+      
+      // Create favorite object
+      const favorite = {
+        id: Date.now(), // Use timestamp as unique ID
+        name: name.trim(),
+        text: text,
+        backgroundUrl: backgroundUrl,
+        fontSize: fontSize,
+        textColor: textColor,
+        shadowColor: shadowColor,
+        aspectRatio: aspectRatio
+      };
+      
+      // Get existing favorites from localStorage
+      let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      
+      // Add new favorite
+      favorites.push(favorite);
+      
+      // Save back to localStorage
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      
+      // Update UI
+      updateFavoritesList();
+      
+      // Clear name input
+      el('favoriteName').value = '';
+      
+      return favorite;
+    }
+    
+    // Function to load a favorite preset
+    function loadFavoritePreset(favorite) {
+      // Set text
+      textInput.value = favorite.text;
+      updateText(favorite.text);
+      
+      // Set background
+      let backgroundIndex = -1;
+      for (let i = 0; i < backgrounds.length; i++) {
+        if (backgrounds[i].url === favorite.backgroundUrl) {
+          backgroundIndex = i;
+          break;
+        }
+      }
+      
+      if (backgroundIndex >= 0) {
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        const thumbnail = document.querySelector(`.thumbnail[data-index="${backgroundIndex}"]`);
+        if (thumbnail) {
+          thumbnail.classList.add('active');
+          timeCard.style.backgroundImage = `url('${favorite.backgroundUrl}')`;
+        }
+      } else {
+        // If the background is not found (might have been deleted or is a custom one)
+        // Let's add it back temporarily
+        backgrounds.push({
+          url: favorite.backgroundUrl,
+          isCustom: true
+        });
+        
+        updateThumbnails();
+        
+        const newIndex = backgrounds.length - 1;
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.thumbnail[data-index="${newIndex}"]`).classList.add('active');
+        timeCard.style.backgroundImage = `url('${favorite.backgroundUrl}')`;
+      }
+      
+      // Set font size
+      el('fontSize').value = favorite.fontSize;
+      timeCard.style.fontSize = favorite.fontSize + 'em';
+      
+      // Set text color
+      el('fontColor').value = favorite.textColor;
+      timeCard.style.color = favorite.textColor;
+      
+      // Set shadow color
+      el('shadowColor').value = favorite.shadowColor;
+      timeCard.style.textShadow = `2px 2px 0 ${favorite.shadowColor}, -2px -2px 0 ${favorite.shadowColor}`;
+      
+      // Set aspect ratio if it exists (for backward compatibility with older favorites)
+      if (favorite.aspectRatio) {
+        is16by9 = favorite.aspectRatio === '16:9';
+        const tv = el('tv');
+        const ratioButton = el('btnRatio');
+        
+        tv.classList.toggle('ratio-4-3', !is16by9);
+        
+        if (is16by9) {
+          ratioButton.textContent = "16:9 → 4:3";
+        } else {
+          ratioButton.textContent = "4:3 → 16:9";
+        }
+        
+        // Show indicator
+        const ratioIndicator = el('ratio-indicator');
+        if (is16by9) {
+          ratioIndicator.textContent = "FORMAT 16:9";
+          ratioIndicator.style.background = "rgba(0, 0, 0, 0.8)";
+          ratioIndicator.style.color = "var(--sponge-yellow)";
+          ratioIndicator.style.borderColor = "var(--sponge-blue)";
+        } else {
+          ratioIndicator.textContent = "FORMAT 4:3";
+          ratioIndicator.style.background = "rgba(0, 0, 0, 0.8)";
+          ratioIndicator.style.color = "var(--sand-orange)";
+          ratioIndicator.style.borderColor = "var(--sand-orange)";
+        }
+        
+        ratioIndicator.style.opacity = "1";
+        setTimeout(() => {
+          ratioIndicator.style.opacity = "0";
+        }, 2000);
+      }
+    }
+    
+    // Function to delete a favorite preset
+    function deleteFavorite(id) {
+      // Get favorites from localStorage
+      let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      
+      // Remove the favorite with the given ID
+      favorites = favorites.filter(favorite => favorite.id !== id);
+      
+      // Save back to localStorage
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      
+      // Update UI
+      updateFavoritesList();
+    }
+    
+    // Function to update the favorites list in the UI
+    function updateFavoritesList() {
+      const favoritesList = el('favoritesList');
+      favoritesList.innerHTML = '';
+      
+      // Get favorites from localStorage
+      const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      
+      if (favorites.length === 0) {
+        const noFavoritesMsg = document.createElement('p');
+        noFavoritesMsg.className = 'no-favorites';
+        noFavoritesMsg.textContent = 'No favorites saved yet. Create your design and save it!';
+        favoritesList.appendChild(noFavoritesMsg);
+        return;
+      }
+      
+      // Create UI for each favorite
+      favorites.forEach(favorite => {
+        const favoriteItem = document.createElement('div');
+        favoriteItem.className = 'favorite-item';
+        
+        // Add thumbnail
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'favorite-thumbnail';
+        thumbnail.style.backgroundImage = `url('${favorite.backgroundUrl}')`;
+        favoriteItem.appendChild(thumbnail);
+        
+        // Add name
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'favorite-name';
+        nameSpan.textContent = favorite.name;
+        nameSpan.title = favorite.text; // Show text as tooltip
+        favoriteItem.appendChild(nameSpan);
+        
+        // Add actions
+        const actions = document.createElement('div');
+        actions.className = 'favorite-actions';
+        
+        // Load button
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'btn-load-favorite';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => loadFavoritePreset(favorite));
+        actions.appendChild(loadBtn);
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete-favorite';
+        deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', () => {
+          if (confirm(`Delete favorite "${favorite.name}"?`)) {
+            deleteFavorite(favorite.id);
+          }
+        });
+        actions.appendChild(deleteBtn);
+        
+        favoriteItem.appendChild(actions);
+        favoritesList.appendChild(favoriteItem);
+      });
+    }
     
     document.addEventListener('DOMContentLoaded', () => {
       setupTabs();
       fillPhrases();
       updateText();
       updateThumbnails();
+      updateFavoritesList();
       
       // Set a random background on page load
       const randomIndex = Math.floor(Math.random() * backgrounds.length);
@@ -752,8 +1045,53 @@
         
         ratioIndicator.style.opacity = "1";
         setTimeout(() => {
-          ratioIndicator.style.opacity = "0";
-        }, 2000);
+          ratioIndicator.style.opacity = "0";        }, 2000);
+      });
+      
+      // Save Favorite Button
+      el('btnSaveFavorite').addEventListener('click', function() {
+        const name = el('favoriteName').value;
+        const savedFavorite = saveCurrentAsFavorite(name);
+        if (savedFavorite) {
+          // Show confirmation
+          const notification = document.createElement('div');
+          notification.style.position = 'fixed';
+          notification.style.bottom = '20px';
+          notification.style.right = '20px';
+          notification.style.background = 'var(--seaweed-green)';
+          notification.style.color = 'white';
+          notification.style.padding = '10px 20px';
+          notification.style.borderRadius = '5px';
+          notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+          notification.style.zIndex = '1000';
+          notification.style.transition = 'all 0.3s ease';
+          notification.textContent = `"${savedFavorite.name}" saved to favorites!`;
+          
+          document.body.appendChild(notification);
+          
+          // Remove after 3 seconds
+          setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+          }, 3000);
+        }
+      });
+      
+      // Add keyboard shortcut to save favorites: Ctrl+S
+      document.addEventListener('keydown', function(e) {
+        // Ctrl+S for saving a favorite
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault(); // Prevent the default save action
+          
+          // Only trigger if we're not in an input field
+          if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+            const favoriteTab = document.querySelector('.tab[data-tab="favorites"]');
+            if (!favoriteTab.classList.contains('active')) {
+              favoriteTab.click(); // Switch to favorites tab
+            }
+            el('favoriteName').focus(); // Focus the name input
+          }
+        }
       });
     });
   </script>
