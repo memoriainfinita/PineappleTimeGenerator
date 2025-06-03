@@ -629,20 +629,23 @@
       // Use precise values for smoother movement
       const x = Number(xPos);
       const y = Number(yPos);
-      
-      // More granular position calculations for smoother movement
+        // More granular position calculations for smoother movement
       // Instead of just using flex-start/center/flex-end, we'll use percentage values
       timeCard.style.display = 'flex';
       timeCard.style.flexDirection = 'column';
       timeCard.style.justifyContent = 'center'; // Reset to default
       timeCard.style.alignItems = 'center'; // Reset to default
+      timeCard.style.height = '100%'; // Ensure full height usage
+      timeCard.style.boxSizing = 'border-box'; // Include padding in height calculation
       
       // Calculate text position using transform instead of flex alignment
       // This allows for more precise positioning
-      const textWrapper = document.querySelector('.text-wrapper') || document.createElement('div');
-      if (!textWrapper.classList.contains('text-wrapper')) {
-        textWrapper.className = 'text-wrapper';        textWrapper.style.position = 'relative';
+      const textWrapper = document.querySelector('.text-wrapper') || document.createElement('div');      if (!textWrapper.classList.contains('text-wrapper')) {
+        textWrapper.className = 'text-wrapper';
+        textWrapper.style.position = 'relative';
         textWrapper.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        // Make the wrapper take up more vertical space to allow for more extreme positions
+        textWrapper.style.width = '100%';
         
         // Move the text content to the wrapper if needed
         if (timeCard.childNodes.length && timeCard.childNodes[0].nodeType === Node.TEXT_NODE) {
@@ -661,21 +664,23 @@
       // This gives more precise control in the center where it's needed most
       const normalizedX = (x - 50) / 50; // -1 to 1 range
       const normalizedY = (y - 50) / 50; // -1 to 1 range
-      
-      // Apply a subtle easing function for more natural movement
+        // Apply a subtle easing function for more natural movement
       // This gives finer control in the middle and more movement at the edges
       const easeX = normalizedX * (0.9 + Math.abs(normalizedX) * 0.4);
-      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 0.4);
+      // Use a stronger easing for vertical movement to reach top/bottom edges
+      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 0.8);
       
-      // Scale to desired range (±80%)
-      const translateX = easeX * 80; 
-      const translateY = easeY * 80;
-      
-      // Apply transform to move text with precise decimal values
+      // Scale factors - wider range for vertical (±95%) compared to horizontal (±80%)
+      const translateX = easeX * 80;
+      const translateY = easeY * 95;
+        // Apply transform to move text with precise decimal values
       textWrapper.style.transform = `translate(${translateX.toFixed(2)}%, ${translateY.toFixed(2)}%)`;
       
-      // Add padding to prevent text from touching edges
-      timeCard.style.padding = '20px'; // Consistent padding
+      // Add dynamic padding - reduce padding when at extreme positions to allow text to go closer to edges
+      // Calculate padding based on position - less padding when closer to edges
+      const verticalPadding = Math.max(5, 20 - Math.abs(normalizedY) * 15);
+      const horizontalPadding = Math.max(5, 20 - Math.abs(normalizedX) * 15);
+      timeCard.style.padding = `${verticalPadding}px ${horizontalPadding}px`;
       
       // Set text alignment if provided
       if (textAlign) {
