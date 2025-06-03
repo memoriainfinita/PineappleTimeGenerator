@@ -682,10 +682,9 @@
       const textColor = el('fontColor').value;
       const shadowColor = el('shadowColor').value;
       const aspectRatio = is16by9 ? '16:9' : '4:3';
-      
-      // Create favorite object
+        // Create favorite object
       const favorite = {
-        id: Date.now(), // Use timestamp as unique ID
+        id: Date.now(), // Use timestamp as unique ID (ensures numeric value)
         name: name.trim(),
         text: text,
         backgroundUrl: backgroundUrl,
@@ -694,6 +693,8 @@
         shadowColor: shadowColor,
         aspectRatio: aspectRatio
       };
+      
+      console.log(`Saving new favorite with ID: ${favorite.id} (${typeof favorite.id})`);
       
       // Get existing favorites from localStorage
       let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
@@ -803,14 +804,20 @@
       // Get favorites from localStorage
       let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
       
+      // Convert id to number to ensure consistent comparison
+      // IDs are stored as timestamps (numbers) but might be passed as strings
+      const numericId = parseInt(id);
+      
       // Remove the favorite with the given ID
-      favorites = favorites.filter(favorite => favorite.id !== id);
+      favorites = favorites.filter(favorite => parseInt(favorite.id) !== numericId);
       
       // Save back to localStorage
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
       
       // Update UI
       updateFavoritesList();
+      
+      console.log(`Deleted favorite with ID: ${numericId}. Remaining favorites: ${favorites.length}`);
     }
     
     // Function to update the favorites list in the UI
@@ -857,14 +864,15 @@
         loadBtn.textContent = 'Load';
         loadBtn.addEventListener('click', () => loadFavoritePreset(favorite));
         actions.appendChild(loadBtn);
-        
-        // Delete button
+          // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-delete-favorite';
         deleteBtn.textContent = '×';
         deleteBtn.addEventListener('click', () => {
           if (confirm(`Delete favorite "${favorite.name}"?`)) {
-            deleteFavorite(favorite.id);
+            // Make sure to convert ID to number if it's stored as string
+            const favoriteId = parseInt(favorite.id);
+            deleteFavorite(favoriteId);
           }
         });
         actions.appendChild(deleteBtn);
@@ -1076,8 +1084,7 @@
           }, 3000);
         }
       });
-      
-      // Add keyboard shortcut to save favorites: Ctrl+S
+        // Add keyboard shortcut to save favorites: Ctrl+S
       document.addEventListener('keydown', function(e) {
         // Ctrl+S for saving a favorite
         if (e.ctrlKey && e.key === 's') {
@@ -1093,6 +1100,44 @@
           }
         }
       });
+      
+      // Expose debug functions to window for easy access in console
+      window.debugFavorites = {
+        // View all favorites in the console
+        inspect: function() {
+          const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+          console.table(favorites);
+          return favorites;
+        },
+        // Clear all favorites (useful for troubleshooting)
+        clear: function() {
+          if (confirm('Are you sure you want to remove ALL favorites?')) {
+            localStorage.removeItem(FAVORITES_KEY);
+            updateFavoritesList();
+            console.log('All favorites cleared');
+          }
+        },
+        // Fix any potential ID issues in existing favorites
+        fixIds: function() {
+          const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+          if (favorites.length === 0) {
+            console.log('No favorites to fix');
+            return;
+          }
+          
+          const fixedFavorites = favorites.map(fav => {
+            return {
+              ...fav,
+              id: parseInt(fav.id) || Date.now() // Ensure ID is numeric
+            };
+          });
+          
+          localStorage.setItem(FAVORITES_KEY, JSON.stringify(fixedFavorites));
+          updateFavoritesList();
+          console.log(`Fixed IDs for ${fixedFavorites.length} favorites`);
+          return fixedFavorites;
+        }
+      };
     });
   </script>
 </body>
