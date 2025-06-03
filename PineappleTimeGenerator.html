@@ -1,0 +1,761 @@
+<!-- SpongeBob Time Card Generator -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pineapple Time Generator</title>
+  <link href="https://fonts.cdnfonts.com/css/some-time-later" rel="stylesheet">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --sponge-yellow: #FFD800;
+      --sponge-blue: #0070BB;
+      --ocean-dark: #0a1626;
+      --ocean-mid: #1E2F45;
+      --ocean-light: #2d436c;
+      --patrick-pink: #FF5252;
+      --seaweed-green: #8BC34A;
+      --jellyfish-purple: #9C27B0;
+      --sand-orange: #e67e22;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--ocean-dark);
+      color: #fff;
+      font-family: 'Some Time Later', sans-serif;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="%23ffffff33"/></svg>');
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px 5px;
+    }
+
+    .app-title {
+      color: var(--sponge-yellow);
+      text-shadow: 2px 2px 0 var(--sponge-blue);
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .tv {
+      background: #111;
+      border: 5px solid #444;
+      border-radius: 10px;
+      width: 100%; 
+      aspect-ratio: 16/9;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .tv.ratio-4-3 {
+      aspect-ratio: 4/3;
+      border-color: var(--sand-orange);
+      transform: scale(1.01);
+    }
+
+    .screen {
+      background-size: cover;
+      background-position: center;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3e1600;
+      font-size: 3em;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      text-shadow: 2px 2px 0 #ffeb99, -2px -2px 0 #ffeb99;
+    }
+
+    .compact-controls {
+      background-color: var(--ocean-mid);
+      border-radius: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }    
+    
+    .control-row:last-child {
+      margin-bottom: 5px;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid var(--ocean-light);
+      margin-bottom: 8px;
+    }
+
+    .tab {
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.9em;
+      border-radius: 5px 5px 0 0;
+      transition: all 0.2s;
+      opacity: 0.7;
+    }
+
+    .tab.active {
+      background-color: var(--sponge-blue);
+      color: var(--sponge-yellow);
+      opacity: 1;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    input, select, button {
+      font-size: 0.9em;
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid var(--ocean-light);
+      background-color: #121f32;
+      color: #fff;
+      font-family: inherit;
+    }
+
+    input[type="text"] {
+      width: calc(100% - 10px);
+    }
+    
+    select {
+      background-color: #121f32;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button {
+      background-color: var(--sponge-blue);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+    
+    button:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    .btn-random {
+      background-color: var(--patrick-pink);
+    }
+    
+    .btn-bg {
+      background-color: var(--seaweed-green);
+    }
+
+    .btn-colors {
+      background: linear-gradient(135deg, var(--patrick-pink) 0%, var(--sponge-blue) 50%, var(--seaweed-green) 100%);
+    }
+
+    .btn-download {
+      background-color: var(--jellyfish-purple);
+    }
+
+    .btn-ratio {
+      background-color: var(--sand-orange);
+    }
+
+    .btn-small {
+      padding: 3px 6px;
+      font-size: 0.8em;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: #121f32;
+      border-radius: 2px;
+      width: 100%;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--sponge-blue);
+      cursor: pointer;
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      padding: 0;
+    }
+
+    .color-controls {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .color-label {
+      font-size: 0.8em;
+      white-space: nowrap;
+    }
+    
+    .thumbnails-row {
+      display: flex;
+      overflow-x: auto;
+      gap: 5px;
+      padding: 5px 0;
+      margin-bottom: 5px;
+      max-width: 100%;
+      scrollbar-width: thin;
+      scrollbar-color: var(--sponge-blue) #162436;
+    }
+    
+    .thumbnails-row::-webkit-scrollbar {
+      height: 5px;
+      background-color: #162436;
+    }
+    
+    .thumbnails-row::-webkit-scrollbar-thumb {
+      background-color: var(--sponge-blue);
+      border-radius: 2px;
+    }
+    
+    .thumbnail {
+      min-width: 50px;
+      height: 40px;
+      border: 2px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+      background-size: cover;
+      background-position: center;
+      transition: all 0.2s;
+      flex: 0 0 auto;
+    }
+    
+    .thumbnail:hover {
+      border-color: var(--sponge-yellow);
+    }
+    
+    .thumbnail.active {
+      border-color: var(--sponge-blue);
+      box-shadow: 0 0 8px rgba(0, 112, 187, 0.6);
+    }
+    
+    .upload-btn {
+      background-color: #2196F3;
+      color: white;
+      border-radius: 4px;
+      transition: all 0.3s;
+      font-weight: bold;
+      text-align: center;
+      padding: 5px;
+      font-size: 0.8em;
+      cursor: pointer;
+    }
+      #imageUpload {
+      display: none;
+    }
+    
+    #ratio-indicator {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: var(--sponge-yellow);
+      padding: 8px 15px;
+      font-size: 1.2em;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      text-shadow: 2px 2px 0 var(--sponge-blue);
+      z-index: 100;
+      pointer-events: none;
+      border: 2px solid var(--sponge-blue);
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    footer {
+      margin-top: 10px;
+      text-align: center;
+      color: #78909C;
+      font-size: 0.7em;
+    }
+
+    footer a {
+      color: #4FC3F7;
+      text-decoration: none;
+    }
+
+    @media (min-width: 500px) {
+      .color-controls-wrapper {
+        display: flex;
+        justify-content: space-between;
+        gap: 5px;
+      }
+      
+      .color-controls {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="app-title">Pineapple Time Generator</h1>
+  
+  <div class="container">
+    <div class="tv" id="tv">
+      <div class="screen" id="timeCard"></div>
+      <div id="ratio-indicator">FORMAT 16:9</div>
+    </div>
+    
+    <div class="compact-controls">
+      <div class="tabs">
+        <div class="tab active" data-tab="basic">Text & Quick Phrases</div>
+        <div class="tab" data-tab="style">Style</div>
+        <div class="tab" data-tab="backgrounds">Backgrounds</div>
+      </div>
+      
+      <!-- Basic Tab (Text & Quick Phrases) -->
+      <div class="tab-content active" id="tab-basic">
+        <div class="control-row">
+          <input type="text" id="textInput" placeholder="Write your time card...">
+        </div>
+        <div class="control-row">
+          <select id="phraseSelect">
+            <option value="" disabled selected>Quick phrases</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <button id="btnRandom" class="btn-random">Random Phrase</button>
+          <button id="btnRandomBg" class="btn-bg">Random Background</button>
+        </div>
+      </div>
+      
+      <!-- Style Tab -->
+      <div class="tab-content" id="tab-style">
+        <div class="control-row">
+          <span class="color-label">Font Size:</span>
+          <input type="range" id="fontSize" min="1" max="6" step="0.1" value="3">
+        </div>
+        <div class="color-controls-wrapper">
+          <div class="color-controls">
+            <span class="color-label">Text:</span>
+            <input type="color" id="fontColor" value="#3e1600">
+          </div>
+          <div class="color-controls">
+            <span class="color-label">Shadow:</span>
+            <input type="color" id="shadowColor" value="#ffeb99">
+          </div>
+          <button id="btnRandomColors" class="btn-colors btn-small">Random Colors</button>
+        </div>
+      </div>
+      
+      <!-- Backgrounds Tab -->
+      <div class="tab-content" id="tab-backgrounds">
+        <div class="thumbnails-row" id="backgroundThumbnails"></div>
+        <div class="control-row">
+          <label for="imageUpload" class="upload-btn">
+            Upload background
+          </label>
+          <input id="imageUpload" type="file" accept="image/*">
+        </div>
+      </div>
+      
+      <!-- Action buttons (always visible) -->
+      <div class="action-buttons">
+        <button id="btnDownload" class="btn-download">Download</button>
+        <button id="btnRatio" class="btn-ratio">16:9 → 4:3</button>
+      </div>
+    </div>
+  </div>    <footer>
+        Made with ❤️ by <a href="" target="_blank">m3m3nt0</a>
+    </footer>
+  <script>
+    // Array of time card phrases
+    const phrases = [
+      "3 Days Later...", "2000 Years Later", "6½ Hours Later", "A Few Inches Later", "Day Two", "Day Three", "Day Four",
+      "A Few Moments Later", "One Eternity Later", "Three Days Later", "Twelve Seconds Later", "3:28 AM", "Three Weeks Later",
+      "Many Months Later", "So much later that the old narrator got tired of waiting and they had to hire a new one",
+      "Tomorrow", "Tomorrow for Sure...", "Eventually...", "Uhhh...", "12:00 Midnight", "One Hour Later", "Two Hours Later",
+      "Three Hours Later", "Please Stand By", "Meanwhile", "8:01 PM", "The Next Day", "Later...", "Twenty Minutes Later",
+      "Six Hours Later", "Several Bad Puns Later", "70 Years Later", "Later That Same Evening", "Several Days Later",
+      "6 Months Later...", "4 to 6 Weeks Later", "One Minute, Thirty Seven Seconds Later"
+    ];
+    
+    // Helper function to get elements by ID
+    const el = id => document.getElementById(id);
+    
+    // Array of predefined backgrounds
+    // Images from https://spongebob-new-fanon.fandom.com
+    const backgroundPresets = [
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/f/fd/Help_Wanted_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/d/dc/Club_SpongeBob_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/b/b4/SpongeGuard_on_Duty_Background.png", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/2/27/Sandy%2C_SpongeBob%2C_and_the_Worm_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/e/e3/Squid_on_Strike_Background.png", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3b/The_Fry_Cook_Games_Backgrounds.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3b/Jellyfish_Hunter_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/b/b0/Artist_Unknown_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/8/8c/I%27m_with_Stupid_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/1/1b/Procrastinationblank.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3a/Krusty_Love_Background.png", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/6/6a/Graveyard_Shift_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/a/a9/Bandgeeksblank.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/9/9d/Frankendoodle_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/e/e6/Gary_Takes_a_Bath_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/7/77/Shanghaied_Background.jpg", isCustom: false },
+      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/2/25/Pressure_Background.jpg", isCustom: false }
+    ];
+    
+    let backgrounds = [...backgroundPresets];  // Array to store all backgrounds (presets + custom uploads)
+    let is16by9 = true;  // Initially in 16:9 mode
+
+    // Main elements
+    const timeCard = el('timeCard');
+    const textInput = el('textInput');
+    const phraseSelect = el('phraseSelect');
+    const backgroundThumbnails = el('backgroundThumbnails');
+    
+    // Tab functionality
+    function setupTabs() {
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        });
+      });
+    }
+    
+    // Function to update the text displayed in the time card
+    function updateText(text) {
+      timeCard.textContent = text || 'The Next Day...';
+    }
+
+    // Function to fill phrase dropdown menu
+    function fillPhrases() {
+      phrases.forEach(phrase => {
+        const option = document.createElement('option');
+        option.value = phrase;
+        option.textContent = phrase;
+        phraseSelect.appendChild(option);
+      });
+    }
+    
+    // Function to create a thumbnail
+    function createThumbnail(url, index, isCustom = false) {
+      const thumbnail = document.createElement('div');
+      thumbnail.className = 'thumbnail';
+      thumbnail.style.backgroundImage = `url('${url}')`;
+      thumbnail.dataset.index = index;
+      
+      if (isCustom) {
+        thumbnail.style.position = 'relative';
+        const removeBtn = document.createElement('span');
+        removeBtn.style.position = 'absolute';
+        removeBtn.style.top = '-5px';
+        removeBtn.style.right = '-5px';
+        removeBtn.style.background = '#FF5252';
+        removeBtn.style.color = 'white';
+        removeBtn.style.borderRadius = '50%';
+        removeBtn.style.width = '15px';
+        removeBtn.style.height = '15px';
+        removeBtn.style.fontSize = '10px';
+        removeBtn.style.lineHeight = '15px';
+        removeBtn.style.textAlign = 'center';
+        removeBtn.style.display = 'none';
+        removeBtn.textContent = '×';
+        
+        thumbnail.appendChild(removeBtn);
+        thumbnail.addEventListener('mouseenter', () => removeBtn.style.display = 'block');
+        thumbnail.addEventListener('mouseleave', () => removeBtn.style.display = 'none');
+        
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const indexToRemove = parseInt(thumbnail.dataset.index);
+          backgrounds.splice(indexToRemove, 1);
+          updateThumbnails();
+          
+          // Select another thumbnail if one exists
+          if (backgrounds.length > 0) {
+            const newIndex = Math.min(indexToRemove, backgrounds.length - 1);
+            document.querySelector(`.thumbnail[data-index="${newIndex}"]`).click();
+          }
+        });
+      }
+      
+      thumbnail.addEventListener('click', () => {
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        thumbnail.classList.add('active');
+        timeCard.style.backgroundImage = `url('${url}')`;
+      });
+      
+      return thumbnail;
+    }
+    
+    // Function to update all thumbnails
+    function updateThumbnails() {
+      backgroundThumbnails.innerHTML = '';
+      backgrounds.forEach((background, index) => {
+        const thumbnail = createThumbnail(background.url, index, background.isCustom);
+        backgroundThumbnails.appendChild(thumbnail);
+      });
+      
+      if (document.querySelectorAll('.thumbnail.active').length === 0 && backgrounds.length > 0) {
+        const firstThumbnail = backgroundThumbnails.querySelector('.thumbnail');
+        if (firstThumbnail) firstThumbnail.click();
+      }
+    }
+    
+    // Function to generate random colors
+    function getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+    
+    // Function to generate a darker color for text
+    function generateDarkColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      
+      const r = parseInt(color.substring(1, 3), 16);
+      const g = parseInt(color.substring(3, 5), 16);
+      const b = parseInt(color.substring(5, 7), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      
+      if (brightness > 180) {
+        return generateDarkColor(); // Generate another if too bright
+      }
+      
+      return color;
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      setupTabs();
+      fillPhrases();
+      updateText();
+      updateThumbnails();
+      
+      // Set a random background on page load
+      const randomIndex = Math.floor(Math.random() * backgrounds.length);
+      document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.thumbnail[data-index="${randomIndex}"]`).classList.add('active');
+      timeCard.style.backgroundImage = `url('${backgrounds[randomIndex].url}')`;
+      
+      // Ensure aspect ratio indicator is hidden initially
+      el('ratio-indicator').style.opacity = "0";
+      
+      // Text input handling
+      textInput.addEventListener('input', e => updateText(e.target.value));
+      
+      // Phrase select handling
+      phraseSelect.addEventListener('change', () => {
+        if (phraseSelect.value) {
+          textInput.value = phraseSelect.value;
+          updateText(phraseSelect.value);
+        }
+      });
+      
+      // Random phrase button
+      el('btnRandom').addEventListener('click', () => {
+        const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+        textInput.value = randomPhrase;
+        updateText(randomPhrase);
+      });
+      
+      // Random background button
+      el('btnRandomBg').addEventListener('click', () => {
+        const randomIndex = Math.floor(Math.random() * backgrounds.length);
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.thumbnail[data-index="${randomIndex}"]`).classList.add('active');
+        timeCard.style.backgroundImage = `url('${backgrounds[randomIndex].url}')`;
+      });
+      
+      // Font size slider
+      el('fontSize').addEventListener('input', e => {
+        timeCard.style.fontSize = e.target.value + 'em';
+      });
+      
+      // Font color picker
+      el('fontColor').addEventListener('input', e => {
+        timeCard.style.color = e.target.value;
+      });
+      
+      // Shadow color picker
+      el('shadowColor').addEventListener('input', e => {
+        const color = e.target.value;
+        timeCard.style.textShadow = `2px 2px 0 ${color}, -2px -2px 0 ${color}`;
+      });
+      
+      // Random colors button
+      el('btnRandomColors').addEventListener('click', function() {
+        const textColor = generateDarkColor();
+        
+        let shadowColor;
+        do {
+          shadowColor = getRandomColor();
+        } while (shadowColor === textColor);
+        
+        el('fontColor').value = textColor;
+        el('shadowColor').value = shadowColor;
+        
+        timeCard.style.color = textColor;
+        timeCard.style.textShadow = `2px 2px 0 ${shadowColor}, -2px -2px 0 ${shadowColor}`;
+        
+        this.style.background = `linear-gradient(135deg, ${textColor} 0%, ${shadowColor} 100%)`;
+        
+        setTimeout(() => {
+          this.style.background = "linear-gradient(135deg, var(--patrick-pink) 0%, var(--sponge-blue) 50%, var(--seaweed-green) 100%)";
+        }, 1000);
+      });
+      
+      // Custom background upload
+      el('imageUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const imageUrl = event.target.result;
+            
+            // Add new image to the beginning of the array instead of the end
+            backgrounds.unshift({
+              url: imageUrl,
+              isCustom: true
+            });
+            
+            updateThumbnails();
+            
+            // Now the new index is 0 instead of length - 1
+            document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.thumbnail[data-index="0"]`).classList.add('active');
+            timeCard.style.backgroundImage = `url('${imageUrl}')`;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      
+      // Download button
+      el('btnDownload').addEventListener('click', function() {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.background = 'rgba(0,0,0,0.7)';
+        overlay.style.color = '#FFD800';
+        overlay.style.fontSize = '1em';
+        overlay.style.zIndex = '999';
+        overlay.textContent = 'Generating...';
+        
+        el('tv').appendChild(overlay);
+
+        html2canvas(el('tv'), {
+          allowTaint: true,
+          useCORS: true,
+          backgroundColor: null,
+          removeContainer: true,
+          onclone: function(clonedDoc) {
+            const clonedOverlay = clonedDoc.querySelector('.tv div:last-child');
+            if (clonedOverlay) clonedOverlay.remove();
+          }
+        }).then(canvas => {
+          const aspectRatio = is16by9 ? '16-9' : '4-3';
+          const link = document.createElement('a');
+          link.download = `pineapple-time-card-${aspectRatio}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          
+          overlay.textContent = 'Done!';
+          overlay.style.background = 'rgba(0,112,187,0.7)';
+          
+          setTimeout(() => {
+            overlay.remove();
+          }, 1000);
+        });
+      });        // Aspect ratio button
+      el('btnRatio').addEventListener('click', function() {
+        is16by9 = !is16by9;
+        const tv = el('tv');
+        const ratioIndicator = el('ratio-indicator');
+        
+        tv.classList.toggle('ratio-4-3', !is16by9);
+        
+        if (is16by9) {
+          this.textContent = "16:9 → 4:3";
+          ratioIndicator.textContent = "FORMAT 16:9";
+          ratioIndicator.style.background = "rgba(0, 0, 0, 0.8)";
+          ratioIndicator.style.color = "var(--sponge-yellow)";
+          ratioIndicator.style.borderColor = "var(--sponge-blue)";
+        } else {
+          this.textContent = "4:3 → 16:9";
+          ratioIndicator.textContent = "FORMAT 4:3";
+          ratioIndicator.style.background = "rgba(0, 0, 0, 0.8)";
+          ratioIndicator.style.color = "var(--sand-orange)";
+          ratioIndicator.style.borderColor = "var(--sand-orange)";
+        }
+        
+        ratioIndicator.style.opacity = "1";
+        setTimeout(() => {
+          ratioIndicator.style.opacity = "0";
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
