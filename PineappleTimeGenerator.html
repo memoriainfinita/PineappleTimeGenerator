@@ -663,22 +663,21 @@
       // Use a non-linear scale for more natural movement that accelerates toward the edges
       // This gives more precise control in the center where it's needed most
       const normalizedX = (x - 50) / 50; // -1 to 1 range
-      const normalizedY = (y - 50) / 50; // -1 to 1 range
-        // Apply a subtle easing function for more natural movement
+      const normalizedY = (y - 50) / 50; // -1 to 1 range      // Apply a subtle easing function for more natural movement
       // This gives finer control in the middle and more movement at the edges
       const easeX = normalizedX * (0.9 + Math.abs(normalizedX) * 0.4);
-      // Use a stronger easing for vertical movement to reach top/bottom edges
-      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 0.8);
+      // Use a much stronger easing for vertical movement to reach top/bottom edges
+      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 1.2);
       
-      // Scale factors - wider range for vertical (±95%) compared to horizontal (±80%)
+      // Scale factors - much wider range for vertical (±120%) compared to horizontal (±80%)
+      // This allows vertical positioning to reach further past the edges
       const translateX = easeX * 80;
-      const translateY = easeY * 95;
+      const translateY = easeY * 120;
         // Apply transform to move text with precise decimal values
       textWrapper.style.transform = `translate(${translateX.toFixed(2)}%, ${translateY.toFixed(2)}%)`;
-      
-      // Add dynamic padding - reduce padding when at extreme positions to allow text to go closer to edges
-      // Calculate padding based on position - less padding when closer to edges
-      const verticalPadding = Math.max(5, 20 - Math.abs(normalizedY) * 15);
+        // Add dynamic padding - reduce padding when at extreme positions to allow text to go closer to edges
+      // Almost no padding at extremes for vertical to allow text to reach edges
+      const verticalPadding = Math.max(2, 20 - Math.abs(normalizedY) * 18); // Reduced minimum padding and stronger reduction
       const horizontalPadding = Math.max(5, 20 - Math.abs(normalizedX) * 15);
       timeCard.style.padding = `${verticalPadding}px ${horizontalPadding}px`;
       
@@ -695,37 +694,32 @@
       // Update display values
       if (el('textPositionXValue')) el('textPositionXValue').textContent = x + '%';
       if (el('textPositionYValue')) el('textPositionYValue').textContent = y + '%';
-      
-      // Add a visual indicator for the selected position that will be hidden when downloading
+        // Create a position indicator that will appear only during slider interaction      // Create a position indicator that will appear only during slider interaction
       const indicator = document.querySelector('.position-indicator') || document.createElement('div');
       if (!indicator.classList.contains('position-indicator')) {
         indicator.className = 'position-indicator';
-        indicator.style.position = 'absolute';        indicator.style.width = '8px';
-        indicator.style.height = '8px';
+        indicator.style.position = 'absolute';        
+        indicator.style.width = '6px';
+        indicator.style.height = '6px';
         indicator.style.borderRadius = '50%';
         indicator.style.backgroundColor = 'rgba(255, 216, 0, 0.6)';
-        indicator.style.border = '1px solid rgba(0, 112, 187, 0.7)';
-        indicator.style.transform = 'translate(-50%, -50%)'; // Center the indicator on the point
+        indicator.style.border = '1px solid rgba(0, 112, 187, 0.6)';
         indicator.style.pointerEvents = 'none'; // Don't interfere with clicks
         indicator.style.zIndex = '1000';
-        indicator.style.boxShadow = '0 0 3px rgba(0, 0, 0, 0.3)';        indicator.style.opacity = '0.7';
-        indicator.style.transition = 'left 0.15s cubic-bezier(0.25, 0.1, 0.25, 1), top 0.15s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        indicator.style.boxShadow = '0 0 2px rgba(0, 0, 0, 0.4)';        
+        indicator.style.opacity = '0'; // Start as invisible, will be shown during interaction
+        indicator.style.transform = 'translate(-50%, -50%)'; // Center the dot on its position
+        indicator.style.transition = 'opacity 0.2s ease';
         indicator.dataset.isPositionIndicator = 'true'; // Mark for html2canvas to ignore
         timeCard.appendChild(indicator);
-      }      // Position the indicator at the center of the text
-      // Use the same x,y values directly from the sliders for consistent feedback
-      // No need to subtract half width/height since we're using transform: translate(-50%, -50%)
+      }
+      
+      // Position the indicator at the actual text position coordinates
+      // This helps the user see exactly where the reference point is
       indicator.style.left = `${x}%`;
       indicator.style.top = `${y}%`;
       
-      // Pulse effect when position changes significantly
-      indicator.animate([
-        { transform: 'scale(1.5)', opacity: '0.9' },
-        { transform: 'scale(1)', opacity: '0.7' }
-      ], {
-        duration: 300,
-        easing: 'ease-out'
-      });
+      // The indicator will be made visible by the event listeners when sliders are being used
     }
 
     // Function to fill phrase dropdown menu
@@ -1092,9 +1086,26 @@
       el('ratio-indicator').style.opacity = "0";
       
       // Initialize text position
-      updateTextPosition(50, 50);
-        // Text position controls
+      updateTextPosition(50, 50);      // Text position controls
       let positionUpdateTimeout;
+      let indicatorTimeout;
+      
+      // Function to show the position indicator temporarily
+      function showPositionIndicator() {
+        const indicator = document.querySelector('.position-indicator');
+        if (indicator) {
+          // Clear any existing hide timer
+          clearTimeout(indicatorTimeout);
+          
+          // Show the indicator
+          indicator.style.opacity = '0.8';
+          
+          // Set timer to hide it after interaction stops
+          indicatorTimeout = setTimeout(() => {
+            indicator.style.opacity = '0';
+          }, 1500); // Hide after 1.5 seconds of inactivity
+        }
+      }
       
       el('textPositionX').addEventListener('input', function() {
         // Clear any pending updates
@@ -1106,6 +1117,9 @@
         
         // Update immediately for responsive feel
         updateTextPosition(xPos, yPos, timeCard.style.textAlign);
+        
+        // Show the position indicator
+        showPositionIndicator();
       });
       
       el('textPositionY').addEventListener('input', function() {
@@ -1118,15 +1132,18 @@
         
         // Update immediately for responsive feel
         updateTextPosition(xPos, yPos, timeCard.style.textAlign);
+        
+        // Show the position indicator
+        showPositionIndicator();
       });
-      
-      // Text alignment controls
+        // Text alignment controls
       el('btnAlignLeft').addEventListener('click', function() {
         updateTextPosition(
           parseInt(el('textPositionX').value), 
           parseInt(el('textPositionY').value), 
           'left'
         );
+        showPositionIndicator();
       });
       
       el('btnAlignCenter').addEventListener('click', function() {
@@ -1135,6 +1152,7 @@
           parseInt(el('textPositionY').value), 
           'center'
         );
+        showPositionIndicator();
       });
       
       el('btnAlignRight').addEventListener('click', function() {
@@ -1143,13 +1161,14 @@
           parseInt(el('textPositionY').value), 
           'right'
         );
+        showPositionIndicator();
       });
-      
-      // Reset position button
+        // Reset position button
       el('btnResetPosition').addEventListener('click', function() {
         el('textPositionX').value = 50;
         el('textPositionY').value = 50;
         updateTextPosition(50, 50, 'center');
+        showPositionIndicator();
       });
       
       // Text input handling
