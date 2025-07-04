@@ -1258,6 +1258,7 @@
       // Download button
       el('btnDownload').addEventListener('click', function() {
         const overlay = document.createElement('div');
+        overlay.className = 'download-overlay'; // Add a specific class
         overlay.style.position = 'absolute';
         overlay.style.top = '0';
         overlay.style.left = '0';
@@ -1272,34 +1273,50 @@
         overlay.style.zIndex = '999';
         overlay.textContent = 'Generating...';
         
-        el('tv').appendChild(overlay);        html2canvas(el('tv'), {
-          allowTaint: true,
-          useCORS: true,
-          backgroundColor: null,
-          removeContainer: true,
-          onclone: function(clonedDoc) {
-            // Remove overlay element
-            const clonedOverlay = clonedDoc.querySelector('.tv div:last-child');
-            if (clonedOverlay && !clonedOverlay.dataset.isPositionIndicator) clonedOverlay.remove();
+        el('tv').appendChild(overlay);
+        
+        // Add a small delay to ensure the overlay is rendered before capturing
+        setTimeout(() => {
+          html2canvas(el('tv'), {
+            allowTaint: true,
+            useCORS: true,
+            backgroundColor: null,
+            removeContainer: true,
+            onclone: function(clonedDoc) {
+              // Remove overlay element by its specific class
+              const clonedOverlay = clonedDoc.querySelector('.download-overlay');
+              if (clonedOverlay) {
+                clonedOverlay.remove();
+              }
+              
+              // Hide position indicator dot
+              const positionIndicator = clonedDoc.querySelector('.position-indicator');
+              if (positionIndicator) {
+                positionIndicator.style.display = 'none';
+              }
+            }
+          }).then(canvas => {
+            const aspectRatio = is16by9 ? '16-9' : '4-3';
+            const link = document.createElement('a');
+            link.download = `pineapple-time-card-${aspectRatio}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
             
-            // Hide position indicator dot
-            const positionIndicator = clonedDoc.querySelector('.position-indicator');
-            if (positionIndicator) positionIndicator.style.display = 'none';
-          }
-        }).then(canvas => {
-          const aspectRatio = is16by9 ? '16-9' : '4-3';
-          const link = document.createElement('a');
-          link.download = `pineapple-time-card-${aspectRatio}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-          
-          overlay.textContent = 'Done!';
-          overlay.style.background = 'rgba(0,112,187,0.7)';
-          
-          setTimeout(() => {
-            overlay.remove();
-          }, 1000);
-        });
+            overlay.textContent = 'Done!';
+            overlay.style.background = 'rgba(0,112,187,0.7)';
+            
+            setTimeout(() => {
+              overlay.remove();
+            }, 1000);
+          }).catch(error => {
+            console.error('Error generating image:', error);
+            overlay.textContent = 'Error!';
+            overlay.style.background = 'rgba(255,0,0,0.7)';
+            setTimeout(() => {
+              overlay.remove();
+            }, 2000);
+          });
+        }, 50); // Small delay to ensure overlay is rendered
       });        // Aspect ratio button
       el('btnRatio').addEventListener('click', function() {
         is16by9 = !is16by9;
