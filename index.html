@@ -445,6 +445,65 @@
       background-position: center;
     }
     
+    .confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 22, 38, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .confirm-modal-content {
+      background: var(--ocean-mid);
+      border: 2px solid var(--sponge-blue);
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .confirm-modal-title {
+      color: var(--sponge-yellow);
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 0 var(--sponge-blue);
+    }
+    
+    .confirm-modal-message {
+      color: #E3F2FD;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    
+    .confirm-modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .confirm-modal-buttons button {
+      flex: 1;
+      padding: 8px;
+      font-size: 1em;
+    }
+    
     @media (min-width: 500px) {
       .color-controls-wrapper {
         display: flex;
@@ -545,9 +604,14 @@
       
       <!-- Favorites Tab -->
       <div class="tab-content" id="tab-favorites">
-        <div class="control-row">
-          <input type="text" id="favoriteName" placeholder="Name your favorite preset...">
-          <button id="btnSaveFavorite" class="btn-save-favorite">Save Current</button>
+        <div class="control-row" style="display: flex; align-items: center; gap: 5px;">
+          <input type="text" id="favoriteName" placeholder="Name your favorite preset..." style="flex: 1; width: auto;">
+          <button id="btnSaveFavorite" class="btn-save-favorite" style="white-space: nowrap;">Save Current</button>
+        </div>
+        <div class="control-row" style="gap: 5px;">
+          <button id="btnExportFavorites" class="btn-bg" style="flex: 1;">Export All</button>
+          <button id="btnImportFavorites" class="btn-colors" style="flex: 1;">Import</button>
+          <input id="importFavoritesInput" type="file" accept=".json" style="display: none;">
         </div>
         <div id="favoritesList" class="favorites-list">
           <p class="no-favorites">No favorites saved yet. Create your design and save it!</p>
@@ -581,25 +645,23 @@
     const el = id => document.getElementById(id);
     
     // Array of predefined backgrounds
-    // Images from https://spongebob-new-fanon.fandom.com
+    // Local images from SpongeBob SquarePants
     const backgroundPresets = [
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/f/fd/Help_Wanted_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/d/dc/Club_SpongeBob_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/b/b4/SpongeGuard_on_Duty_Background.png", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/2/27/Sandy%2C_SpongeBob%2C_and_the_Worm_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/e/e3/Squid_on_Strike_Background.png", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3b/The_Fry_Cook_Games_Backgrounds.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3b/Jellyfish_Hunter_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/b/b0/Artist_Unknown_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/8/8c/I%27m_with_Stupid_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/1/1b/Procrastinationblank.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/3/3a/Krusty_Love_Background.png", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/6/6a/Graveyard_Shift_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/a/a9/Bandgeeksblank.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/9/9d/Frankendoodle_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/e/e6/Gary_Takes_a_Bath_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/7/77/Shanghaied_Background.jpg", isCustom: false },
-      { url: "https://static.wikia.nocookie.net/spongebob-new-fanon/images/2/25/Pressure_Background.jpg", isCustom: false }
+      { url: "backgrounds/band-geeks.jpg", isCustom: false },
+      { url: "backgrounds/club-spongebob.jpg", isCustom: false },
+      { url: "backgrounds/frankendoodle.jpg", isCustom: false },
+      { url: "backgrounds/fry-cook-games.jpg", isCustom: false },
+      { url: "backgrounds/gary-bath.jpg", isCustom: false },
+      { url: "backgrounds/graveyard-shift.jpg", isCustom: false },
+      { url: "backgrounds/im-with-stupid.jpg", isCustom: false },
+      { url: "backgrounds/jellyfish-hunter.jpg", isCustom: false },
+      { url: "backgrounds/krusty-love.png", isCustom: false },
+      { url: "backgrounds/pressure.jpg", isCustom: false },
+      { url: "backgrounds/procrastination.jpg", isCustom: false },
+      { url: "backgrounds/sandy-worm.jpg", isCustom: false },
+      { url: "backgrounds/shanghaied.jpg", isCustom: false },
+      { url: "backgrounds/spongeguard-on-duty.png", isCustom: false },
+      { url: "backgrounds/squid-on-strike.png", isCustom: false }
     ];
     
     let backgrounds = [...backgroundPresets];  // Array to store all backgrounds (presets + custom uploads)
@@ -899,7 +961,14 @@
       // Function to save current settings as a favorite
     function saveCurrentAsFavorite(name) {
       if (!name || name.trim() === '') {
-        alert('Please enter a name for your favorite preset');
+        showNotification('Please enter a name for your favorite preset', 'var(--sand-orange)');
+        // Add visual feedback to the input
+        const nameInput = el('favoriteName');
+        nameInput.style.borderColor = 'var(--patrick-pink)';
+        nameInput.focus();
+        setTimeout(() => {
+          nameInput.style.borderColor = '';
+        }, 2000);
         return;
       }
       
@@ -1127,17 +1196,225 @@
         deleteBtn.className = 'btn-delete-favorite';
         deleteBtn.textContent = '×';
         deleteBtn.addEventListener('click', () => {
-          if (confirm(`Delete favorite "${favorite.name}"?`)) {
-            // Make sure to convert ID to number if it's stored as string
-            const favoriteId = parseInt(favorite.id);
-            deleteFavorite(favoriteId);
-          }
+          showConfirmModal(
+            'Delete Favorite?',
+            `Are you sure you want to delete "${favorite.name}"?`,
+            () => {
+              // Make sure to convert ID to number if it's stored as string
+              const favoriteId = parseInt(favorite.id);
+              deleteFavorite(favoriteId);
+              showNotification(`"${favorite.name}" deleted`, 'var(--patrick-pink)');
+            },
+            null,
+            'Delete',
+            'Cancel'
+          );
         });
         actions.appendChild(deleteBtn);
         
         favoriteItem.appendChild(actions);
         favoritesList.appendChild(favoriteItem);
       });
+    }
+    
+    // Function to export all favorites to a JSON file
+    function exportFavorites() {
+      const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      
+      if (favorites.length === 0) {
+        showNotification('No favorites to export!', 'var(--sand-orange)');
+        return;
+      }
+      
+      // Create JSON file
+      const dataStr = JSON.stringify(favorites, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      
+      // Create download link
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 10);
+      link.download = `pineapple-favorites-${timestamp}.json`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      // Show confirmation
+      showNotification(`Exported ${favorites.length} favorite(s)!`, 'var(--seaweed-green)');
+    }
+    
+    // Function to import favorites from a JSON file
+    function importFavorites(file) {
+      if (!file) return;
+      
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        try {
+          const importedFavorites = JSON.parse(e.target.result);
+          
+          // Validate that it's an array
+          if (!Array.isArray(importedFavorites)) {
+            throw new Error('Invalid file format: expected an array of favorites');
+          }
+          
+          // Validate that each item has required properties
+          const validFavorites = importedFavorites.filter(fav => {
+            return fav.name && fav.text && fav.backgroundUrl;
+          });
+          
+          if (validFavorites.length === 0) {
+            throw new Error('No valid favorites found in file');
+          }
+          
+          // Get existing favorites
+          let existingFavorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+          
+          // Ask user how to handle existing favorites
+          if (existingFavorites.length === 0) {
+            // No existing favorites, just import
+            validFavorites.forEach((fav, index) => {
+              fav.id = Date.now() + index;
+            });
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(validFavorites));
+            updateFavoritesList();
+            showNotification(`Imported ${validFavorites.length} favorite(s)!`, 'var(--sponge-blue)');
+            return;
+          }
+          
+          // Show custom modal for merge/replace choice
+          showConfirmModal(
+            'Import Favorites',
+            `Found ${validFavorites.length} favorite(s) in file. You currently have ${existingFavorites.length}.\n\nClick "Merge" to keep existing + add new, or "Replace" to remove all existing.`,
+            // On confirm (Merge)
+            () => {
+              const maxId = existingFavorites.reduce((max, fav) => Math.max(max, parseInt(fav.id) || 0), 0);
+              validFavorites.forEach((fav, index) => {
+                fav.id = maxId + index + 1;
+                existingFavorites.push(fav);
+              });
+              localStorage.setItem(FAVORITES_KEY, JSON.stringify(existingFavorites));
+              updateFavoritesList();
+              showNotification(`Merged ${validFavorites.length} favorite(s)!`, 'var(--seaweed-green)');
+            },
+            // On cancel (Replace)
+            () => {
+              validFavorites.forEach((fav, index) => {
+                fav.id = Date.now() + index;
+              });
+              localStorage.setItem(FAVORITES_KEY, JSON.stringify(validFavorites));
+              updateFavoritesList();
+              showNotification(`Replaced with ${validFavorites.length} favorite(s)!`, 'var(--sponge-blue)');
+            },
+            'Merge',
+            'Replace'
+          );
+          return;
+
+          
+        } catch (error) {
+          console.error('Import error:', error);
+          showNotification(`Error: ${error.message}`, 'var(--patrick-pink)');
+        }
+      };
+      
+      reader.onerror = function() {
+        showNotification('Error reading file. Please try again.', 'var(--patrick-pink)');
+      };
+      
+      reader.readAsText(file);
+    }
+    
+    // Helper function to show notifications
+    function showNotification(message, bgColor = 'var(--seaweed-green)') {
+      const notification = document.createElement('div');
+      notification.style.position = 'fixed';
+      notification.style.bottom = '20px';
+      notification.style.right = '20px';
+      notification.style.background = bgColor;
+      notification.style.color = 'white';
+      notification.style.padding = '10px 20px';
+      notification.style.borderRadius = '5px';
+      notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      notification.style.zIndex = '1000';
+      notification.style.transition = 'all 0.3s ease';
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+    
+    // Helper function to show custom confirmation modal
+    function showConfirmModal(title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel') {
+      // Create modal overlay
+      const modal = document.createElement('div');
+      modal.className = 'confirm-modal';
+      
+      // Create modal content
+      const content = document.createElement('div');
+      content.className = 'confirm-modal-content';
+      
+      // Title
+      const titleEl = document.createElement('div');
+      titleEl.className = 'confirm-modal-title';
+      titleEl.textContent = title;
+      content.appendChild(titleEl);
+      
+      // Message
+      const messageEl = document.createElement('div');
+      messageEl.className = 'confirm-modal-message';
+      messageEl.textContent = message;
+      content.appendChild(messageEl);
+      
+      // Buttons container
+      const buttons = document.createElement('div');
+      buttons.className = 'confirm-modal-buttons';
+      
+      // Cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = cancelText;
+      cancelBtn.style.backgroundColor = 'var(--ocean-light)';
+      cancelBtn.addEventListener('click', () => {
+        modal.remove();
+        if (onCancel) onCancel();
+      });
+      buttons.appendChild(cancelBtn);
+      
+      // Confirm button
+      const confirmBtn = document.createElement('button');
+      confirmBtn.textContent = confirmText;
+      confirmBtn.style.backgroundColor = 'var(--patrick-pink)';
+      confirmBtn.addEventListener('click', () => {
+        modal.remove();
+        if (onConfirm) onConfirm();
+      });
+      buttons.appendChild(confirmBtn);
+      
+      content.appendChild(buttons);
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Close on overlay click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          if (onCancel) onCancel();
+        }
+      });
+      
+      // Focus on confirm button
+      confirmBtn.focus();
     }
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -1151,6 +1428,12 @@
       document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
       document.querySelector(`.thumbnail[data-index="${randomIndex}"]`).classList.add('active');
       timeCard.style.backgroundImage = `url('${backgrounds[randomIndex].url}')`;
+      
+      // Set a random phrase on page load
+      const randomPhraseIndex = Math.floor(Math.random() * phrases.length);
+      const randomPhrase = phrases[randomPhraseIndex];
+      textInput.value = randomPhrase;
+      updateText(randomPhrase);
       
       // Ensure aspect ratio indicator is hidden initially
       el('ratio-indicator').style.opacity = "0";
@@ -1462,27 +1745,27 @@
         const name = el('favoriteName').value;
         const savedFavorite = saveCurrentAsFavorite(name);
         if (savedFavorite) {
-          // Show confirmation
-          const notification = document.createElement('div');
-          notification.style.position = 'fixed';
-          notification.style.bottom = '20px';
-          notification.style.right = '20px';
-          notification.style.background = 'var(--seaweed-green)';
-          notification.style.color = 'white';
-          notification.style.padding = '10px 20px';
-          notification.style.borderRadius = '5px';
-          notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-          notification.style.zIndex = '1000';
-          notification.style.transition = 'all 0.3s ease';
-          notification.textContent = `"${savedFavorite.name}" saved to favorites!`;
-          
-          document.body.appendChild(notification);
-          
-          // Remove after 3 seconds
-          setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
-          }, 3000);
+          showNotification(`"${savedFavorite.name}" saved to favorites!`, 'var(--seaweed-green)');
+        }
+      });
+      
+      // Export Favorites Button
+      el('btnExportFavorites').addEventListener('click', function() {
+        exportFavorites();
+      });
+      
+      // Import Favorites Button
+      el('btnImportFavorites').addEventListener('click', function() {
+        el('importFavoritesInput').click();
+      });
+      
+      // Import Favorites Input Handler
+      el('importFavoritesInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          importFavorites(file);
+          // Reset input so the same file can be imported again if needed
+          e.target.value = '';
         }
       });
         // Add keyboard shortcut to save favorites: Ctrl+S

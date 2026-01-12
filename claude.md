@@ -8,11 +8,12 @@ A SpongeBob-themed time card generator inspired by the iconic title cards from t
 - html2canvas for image export
 - LocalStorage for favorites persistence
 - "Some Time Later" font from CDN
+- Background images from SpongeBob SquarePants (SpongeBob New Fanon Wiki)
 
 ## Key Features
-1. **Text Customization**: Custom text input + 35+ predefined SpongeBob phrases
+1. **Text Customization**: Custom text input + 35+ predefined SpongeBob phrases (random phrase on page load)
 2. **Visual Styling**: Font size, colors, text shadows, positioning (X/Y + alignment)
-3. **Backgrounds**: 17 predefined SpongeBob backgrounds + custom image upload
+3. **Backgrounds**: 15 predefined SpongeBob backgrounds + custom image upload (random background on page load)
 4. **Aspect Ratios**: Toggle between 16:9 and 4:3 formats
 5. **Favorites System**: Save/load/delete favorite presets (stored in LocalStorage)
 6. **Export**: Download as PNG with selected aspect ratio

@@ -30,8 +30,8 @@ No download needed - use it directly in your browser!
 ## Features
 
 - **Customizable text**: Write your own text or select from a list of iconic phrases from the series
-- **Random phrases**: Generate random phrases in the style of "3 Days Later..." with one click
-- **Predefined backgrounds**: Includes a collection of original marine backgrounds from the series
+- **Random phrases**: Generate random phrases in the style of "3 Days Later..." with one click (also loads randomly on page start)
+- **Predefined backgrounds**: Includes 15 original backgrounds from SpongeBob SquarePants episodes (sourced from SpongeBob New Fanon Wiki, also loads randomly on page start)
 - **Custom backgrounds**: Upload your own backgrounds to customize your time cards
 - **Smart color system**: Auto-contrast feature that analyzes background brightness and automatically adjusts text and shadow colors for optimal visibility
 - **Customizable style**: Adjust text size (with +/- buttons), text color, and shadow
