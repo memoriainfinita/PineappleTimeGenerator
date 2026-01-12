@@ -1,10 +1,31 @@
 # Pineapple Time Generator
 
-![Pineapple Time Generator](https://static.wikia.nocookie.net/spongebob-new-fanon/images/f/fd/Help_Wanted_Background.jpg)
-
 ## Description
 
 Pineapple Time Generator is a web application that allows you to easily create time cards in the style of the animated series featuring a yellow sea sponge. This tool is designed to create visually appealing time transitions that you can use in your videos or presentations.
+
+## Quick Start
+
+### Use Online (Easiest)
+
+🌐 **[Open Pineapple Time Generator](https://memoriainfinita.github.io/PinnapleTimeGenerator/)**
+
+No download needed - use it directly in your browser!
+
+### Installation (Local Use)
+
+1. **Download**: Clone this repository or download `index.html`
+   ```bash
+   git clone https://github.com/memoriainfinita/PinnapleTimeGenerator.git
+   ```
+   Or simply download the HTML file directly from GitHub
+
+2. **Run**: Open `index.html` in your web browser
+   - No installation required
+   - No dependencies to install
+   - Works completely offline (except for font CDN)
+
+3. **Start creating**: The app is ready to use immediately!
 
 ## Features
 
