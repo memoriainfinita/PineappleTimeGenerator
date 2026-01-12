@@ -29,7 +29,7 @@
     body {
       background-color: var(--ocean-dark);
       color: #fff;
-      font-family: 'Some Time Later', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="%23ffffff33"/></svg>');
       display: flex;
       flex-direction: column;
@@ -43,6 +43,7 @@
       text-shadow: 2px 2px 0 var(--sponge-blue);
       font-size: 1.5em;
       margin-bottom: 10px;
+      font-family: 'Some Time Later', sans-serif;
     }
 
     .container {
@@ -52,8 +53,8 @@
 
     .tv {
       background: #111;
-      border: 5px solid #444;
-      border-radius: 10px;
+      border: none;
+      border-radius: 0;
       width: 100%; 
       aspect-ratio: 16/9;
       position: relative;
@@ -64,7 +65,6 @@
     
     .tv.ratio-4-3 {
       aspect-ratio: 4/3;
-      border-color: var(--sand-orange);
       transform: scale(1.01);
     }    .screen {
       background-size: cover;
@@ -82,6 +82,13 @@
       padding: 20px;
       box-sizing: border-box;
       text-shadow: 2px 2px 0 #ffeb99, -2px -2px 0 #ffeb99;
+      font-family: 'Some Time Later', sans-serif;
+      cursor: grab;
+      user-select: none;
+    }
+    
+    .screen:active {
+      cursor: grabbing;
     }
 
     .compact-controls {
@@ -142,7 +149,6 @@
       border: 1px solid var(--ocean-light);
       background-color: #121f32;
       color: #fff;
-      font-family: inherit;
     }
 
     input[type="text"] {
@@ -163,6 +169,7 @@
       border: none;
       padding: 5px 10px;
       white-space: nowrap;
+      min-width: fit-content;
     }
     
     button:hover {
@@ -274,53 +281,41 @@
       .position-label {
       font-size: 0.85em;
       white-space: nowrap;
-      color: var(--ocean-dark);
+      color: #E3F2FD;
       font-weight: 500;
     }
     
     .position-value {
       font-size: 0.75em;
-      background: rgba(255, 216, 0, 0.1);
+      background: rgba(255, 216, 0, 0.15);
       padding: 2px 5px;
       border-radius: 3px;
       min-width: 38px;
       text-align: center;
-      color: #78909C;
+      color: var(--sponge-yellow);
       text-align: right;
       padding-right: 5px;
+      font-weight: 600;
     }
     
     .thumbnails-row {
-      display: flex;
-      overflow-x: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
       gap: 5px;
       padding: 5px 0;
       margin-bottom: 5px;
       max-width: 100%;
-      scrollbar-width: thin;
-      scrollbar-color: var(--sponge-blue) #162436;
-    }
-    
-    .thumbnails-row::-webkit-scrollbar {
-      height: 5px;
-      background-color: #162436;
-    }
-    
-    .thumbnails-row::-webkit-scrollbar-thumb {
-      background-color: var(--sponge-blue);
-      border-radius: 2px;
     }
     
     .thumbnail {
-      min-width: 50px;
-      height: 40px;
+      width: 100%;
+      aspect-ratio: 16/9;
       border: 2px solid #444;
       border-radius: 4px;
       cursor: pointer;
       background-size: cover;
       background-position: center;
       transition: all 0.2s;
-      flex: 0 0 auto;
     }
     
     .thumbnail:hover {
@@ -492,24 +487,31 @@
         <div class="control-row">
           <button id="btnRandom" class="btn-random">Random Phrase</button>
           <button id="btnRandomBg" class="btn-bg">Random Background</button>
+          <button id="btnRandomColorsBasic" class="btn-colors">Random Colors</button>
         </div>
       </div>
         <!-- Style Tab -->
       <div class="tab-content" id="tab-style">
-        <div class="control-row">
-          <span class="color-label">Font Size:</span>
-          <input type="range" id="fontSize" min="1" max="6" step="0.1" value="3">
-        </div>
-        <div class="color-controls-wrapper">
-          <div class="color-controls">
-            <span class="color-label">Text:</span>
-            <input type="color" id="fontColor" value="#3e1600">
+        <div style="background: rgba(18, 31, 50, 0.1); border-radius: 5px; padding: 8px; border: 1px solid rgba(0, 112, 187, 0.2); margin-bottom: 8px;">
+          <div class="control-row">
+            <span class="color-label">Font Size:</span>
+            <div style="display: flex; gap: 5px; align-items: center; flex: 1;">
+              <button id="btnFontSizeMinus" class="btn-small" style="padding: 3px 8px;">-</button>
+              <input type="range" id="fontSize" min="1" max="6" step="0.1" value="3" style="flex: 1;">
+              <button id="btnFontSizePlus" class="btn-small" style="padding: 3px 8px;">+</button>
+            </div>
           </div>
-          <div class="color-controls">
-            <span class="color-label">Shadow:</span>
-            <input type="color" id="shadowColor" value="#ffeb99">
+          <div class="color-controls-wrapper">
+            <div class="color-controls">
+              <span class="color-label">Text:</span>
+              <input type="color" id="fontColor" value="#3e1600">
+            </div>
+            <div class="color-controls">
+              <span class="color-label">Shadow:</span>
+              <input type="color" id="shadowColor" value="#ffeb99">
+            </div>
+            <button id="btnRandomColors" class="btn-colors btn-small">Random Colors</button>
           </div>
-          <button id="btnRandomColors" class="btn-colors btn-small">Random Colors</button>
         </div>
         <hr style="border: none; border-top: 1px solid var(--ocean-light); margin: 8px 0;">        <div class="position-controls">
           <span class="position-label">Horizontal:</span>
@@ -663,20 +665,20 @@
       const normalizedX = (x - 50) / 50;
       const normalizedY = (y - 50) / 50;
       
-      // Apply easing for natural movement
-      const easeX = normalizedX * (0.9 + Math.abs(normalizedX) * 0.4);
+      // Apply easing for natural movement with safe margins
+      const easeX = normalizedX * (0.7 + Math.abs(normalizedX) * 0.2); // Reduced horizontal range
       const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 1.2);
       
-      // Scale factors - wider vertical range for edge positioning
-      const translateX = easeX * 80;
+      // Scale factors - limited horizontal to stay within safe area
+      const translateX = easeX * 60; // Reduced from 80 to 60 for safe margins
       const translateY = easeY * 120;
         
       // Apply transform with precise decimal values
       textWrapper.style.transform = `translate(${translateX.toFixed(2)}%, ${translateY.toFixed(2)}%)`;
         
-      // Reduce padding at extremes to allow text closer to edges
+      // Maintain safe padding (more conservative on horizontal)
       const verticalPadding = Math.max(2, 20 - Math.abs(normalizedY) * 18);
-      const horizontalPadding = Math.max(5, 20 - Math.abs(normalizedX) * 15);
+      const horizontalPadding = Math.max(15, 25 - Math.abs(normalizedX) * 8); // Increased minimum padding
       timeCard.style.padding = `${verticalPadding}px ${horizontalPadding}px`;
       
       // Set text alignment and update button states
@@ -691,30 +693,6 @@
       // Update display values
       if (el('textPositionXValue')) el('textPositionXValue').textContent = x + '%';
       if (el('textPositionYValue')) el('textPositionYValue').textContent = y + '%';
-      
-      // Create position indicator for visual feedback
-      const indicator = document.querySelector('.position-indicator') || document.createElement('div');
-      if (!indicator.classList.contains('position-indicator')) {
-        indicator.className = 'position-indicator';
-        indicator.style.position = 'absolute';        
-        indicator.style.width = '6px';
-        indicator.style.height = '6px';
-        indicator.style.borderRadius = '50%';
-        indicator.style.backgroundColor = 'rgba(255, 216, 0, 0.6)';
-        indicator.style.border = '1px solid rgba(0, 112, 187, 0.6)';
-        indicator.style.pointerEvents = 'none';
-        indicator.style.zIndex = '1000';
-        indicator.style.boxShadow = '0 0 2px rgba(0, 0, 0, 0.4)';        
-        indicator.style.opacity = '0';
-        indicator.style.transform = 'translate(-50%, -50%)';
-        indicator.style.transition = 'opacity 0.2s ease';
-        indicator.dataset.isPositionIndicator = 'true';
-        timeCard.appendChild(indicator);
-      }
-      
-      // Position indicator at current coordinates
-      indicator.style.left = `${x}%`;
-      indicator.style.top = `${y}%`;
     }
 
     // Function to fill phrase dropdown menu
@@ -773,6 +751,9 @@
         document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
         thumbnail.classList.add('active');
         timeCard.style.backgroundImage = `url('${url}')`;
+        
+        // Auto-adjust colors based on new background
+        autoAdjustColors(url);
       });
       
       return thumbnail;
@@ -820,6 +801,100 @@
       }
       
       return color;
+    }
+    
+    // Function to generate a lighter color for shadow
+    function generateLightColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      
+      const r = parseInt(color.substring(1, 3), 16);
+      const g = parseInt(color.substring(3, 5), 16);
+      const b = parseInt(color.substring(5, 7), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      
+      if (brightness < 180) {
+        return generateLightColor(); // Generate another if too dark
+      }
+      
+      return color;
+    }
+    
+    // Function to analyze background brightness
+    function analyzeBackgroundBrightness(imageUrl, callback) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Use smaller canvas for faster analysis
+        canvas.width = 100;
+        canvas.height = 100;
+        
+        ctx.drawImage(img, 0, 0, 100, 100);
+        
+        try {
+          const imageData = ctx.getImageData(0, 0, 100, 100);
+          const data = imageData.data;
+          
+          let totalBrightness = 0;
+          let pixelCount = 0;
+          
+          // Sample every pixel
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            totalBrightness += brightness;
+            pixelCount++;
+          }
+          
+          const avgBrightness = totalBrightness / pixelCount;
+          callback(avgBrightness);
+        } catch (e) {
+          // If CORS error or other issue, use default
+          console.log('Could not analyze background, using defaults');
+          callback(128); // Default to medium brightness
+        }
+      };
+      
+      img.onerror = function() {
+        console.log('Error loading image for analysis');
+        callback(128); // Default to medium brightness
+      };
+      
+      img.src = imageUrl;
+    }
+    
+    // Function to auto-adjust colors based on background brightness
+    function autoAdjustColors(backgroundUrl) {
+      analyzeBackgroundBrightness(backgroundUrl, function(brightness) {
+        console.log('Background brightness:', brightness);
+        
+        let textColor, shadowColor;
+        
+        // If background is dark (< 128), use light text with dark shadow
+        // If background is light (>= 128), use dark text with light shadow
+        if (brightness < 128) {
+          textColor = generateLightColor();
+          shadowColor = generateDarkColor();
+        } else {
+          textColor = generateDarkColor();
+          shadowColor = generateLightColor();
+        }
+        
+        // Apply colors
+        el('fontColor').value = textColor;
+        el('shadowColor').value = shadowColor;
+        timeCard.style.color = textColor;
+        timeCard.style.textShadow = `2px 2px 0 ${shadowColor}, -2px -2px 0 ${shadowColor}`;
+      });
     }
       // Function to save current settings as a favorite
     function saveCurrentAsFavorite(name) {
@@ -1081,64 +1156,27 @@
       el('ratio-indicator').style.opacity = "0";
       
       // Initialize text position
-      updateTextPosition(50, 50);      // Text position controls
-      let positionUpdateTimeout;
-      let indicatorTimeout;
+      updateTextPosition(50, 50);
       
-      // Function to show the position indicator temporarily
-      function showPositionIndicator() {
-        const indicator = document.querySelector('.position-indicator');
-        if (indicator) {
-          // Clear any existing hide timer
-          clearTimeout(indicatorTimeout);
-          
-          // Show the indicator
-          indicator.style.opacity = '0.8';
-          
-          // Set timer to hide it after interaction stops
-          indicatorTimeout = setTimeout(() => {
-            indicator.style.opacity = '0';
-          }, 1500); // Hide after 1.5 seconds of inactivity
-        }
-      }
-      
+      // Text position controls
       el('textPositionX').addEventListener('input', function() {
-        // Clear any pending updates
-        clearTimeout(positionUpdateTimeout);
-        
-        // Get values directly from sliders - no need to parse if step is 1
         const xPos = Number(this.value);
         const yPos = Number(el('textPositionY').value);
-        
-        // Update immediately for responsive feel
         updateTextPosition(xPos, yPos, timeCard.style.textAlign);
-        
-        // Show the position indicator
-        showPositionIndicator();
       });
       
       el('textPositionY').addEventListener('input', function() {
-        // Clear any pending updates
-        clearTimeout(positionUpdateTimeout);
-        
-        // Get values directly from sliders - no need to parse if step is 1
         const xPos = Number(el('textPositionX').value);
         const yPos = Number(this.value);
-        
-        // Update immediately for responsive feel
         updateTextPosition(xPos, yPos, timeCard.style.textAlign);
-        
-        // Show the position indicator
-        showPositionIndicator();
       });
-        // Text alignment controls
+      // Text alignment controls
       el('btnAlignLeft').addEventListener('click', function() {
         updateTextPosition(
           parseInt(el('textPositionX').value), 
           parseInt(el('textPositionY').value), 
           'left'
         );
-        showPositionIndicator();
       });
       
       el('btnAlignCenter').addEventListener('click', function() {
@@ -1147,7 +1185,6 @@
           parseInt(el('textPositionY').value), 
           'center'
         );
-        showPositionIndicator();
       });
       
       el('btnAlignRight').addEventListener('click', function() {
@@ -1156,14 +1193,62 @@
           parseInt(el('textPositionY').value), 
           'right'
         );
-        showPositionIndicator();
       });
-        // Reset position button
+      // Reset position button
       el('btnResetPosition').addEventListener('click', function() {
         el('textPositionX').value = 50;
         el('textPositionY').value = 50;
         updateTextPosition(50, 50, 'center');
-        showPositionIndicator();
+      });
+      
+      // Drag to reposition text
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let startPosX = 0;
+      let startPosY = 0;
+      
+      timeCard.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        startPosX = Number(el('textPositionX').value);
+        startPosY = Number(el('textPositionY').value);
+        e.preventDefault(); // Prevent text selection
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        
+        // Get timeCard dimensions
+        const rect = timeCard.getBoundingClientRect();
+        
+        // Calculate movement delta in pixels
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        
+        // Convert pixel delta to percentage
+        const percentDeltaX = (deltaX / rect.width) * 100;
+        const percentDeltaY = (deltaY / rect.height) * 100;
+        
+        // Calculate new position
+        let newX = startPosX + percentDeltaX;
+        let newY = startPosY + percentDeltaY;
+        
+        // Clamp values between 0 and 100
+        newX = Math.max(0, Math.min(100, Math.round(newX)));
+        newY = Math.max(0, Math.min(100, Math.round(newY)));
+        
+        // Update sliders
+        el('textPositionX').value = newX;
+        el('textPositionY').value = newY;
+        
+        // Update text position
+        updateTextPosition(newX, newY, timeCard.style.textAlign);
+      });
+      
+      document.addEventListener('mouseup', function() {
+        isDragging = false;
       });
       
       // Text input handling
@@ -1189,12 +1274,31 @@
         const randomIndex = Math.floor(Math.random() * backgrounds.length);
         document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
         document.querySelector(`.thumbnail[data-index="${randomIndex}"]`).classList.add('active');
-        timeCard.style.backgroundImage = `url('${backgrounds[randomIndex].url}')`;
+        const backgroundUrl = backgrounds[randomIndex].url;
+        timeCard.style.backgroundImage = `url('${backgroundUrl}')`;
+        
+        // Auto-adjust colors for new background
+        autoAdjustColors(backgroundUrl);
       });
       
       // Font size slider
       el('fontSize').addEventListener('input', e => {
         timeCard.style.fontSize = e.target.value + 'em';
+      });
+      
+      // Font size buttons
+      el('btnFontSizePlus').addEventListener('click', function() {
+        const currentSize = parseFloat(el('fontSize').value);
+        const newSize = Math.min(6, currentSize + 0.2); // Increment by 0.2, max 6
+        el('fontSize').value = newSize;
+        timeCard.style.fontSize = newSize + 'em';
+      });
+      
+      el('btnFontSizeMinus').addEventListener('click', function() {
+        const currentSize = parseFloat(el('fontSize').value);
+        const newSize = Math.max(1, currentSize - 0.2); // Decrement by 0.2, min 1
+        el('fontSize').value = newSize;
+        timeCard.style.fontSize = newSize + 'em';
       });
       
       // Font color picker
@@ -1208,26 +1312,38 @@
         timeCard.style.textShadow = `2px 2px 0 ${color}, -2px -2px 0 ${color}`;
       });
       
-      // Random colors button
+      // Random colors button (with smart auto-contrast)
       el('btnRandomColors').addEventListener('click', function() {
-        const textColor = generateDarkColor();
-        
-        let shadowColor;
-        do {
-          shadowColor = getRandomColor();
-        } while (shadowColor === textColor);
-        
-        el('fontColor').value = textColor;
-        el('shadowColor').value = shadowColor;
-        
-        timeCard.style.color = textColor;
-        timeCard.style.textShadow = `2px 2px 0 ${shadowColor}, -2px -2px 0 ${shadowColor}`;
-        
-        this.style.background = `linear-gradient(135deg, ${textColor} 0%, ${shadowColor} 100%)`;
-        
-        setTimeout(() => {
-          this.style.background = "linear-gradient(135deg, var(--patrick-pink) 0%, var(--sponge-blue) 50%, var(--seaweed-green) 100%)";
-        }, 1000);
+        const activeThumb = document.querySelector('.thumbnail.active');
+        if (activeThumb) {
+          const backgroundIndex = parseInt(activeThumb.dataset.index);
+          const backgroundUrl = backgrounds[backgroundIndex].url;
+          autoAdjustColors(backgroundUrl);
+          
+          // Visual feedback with same text length
+          const originalText = this.textContent;
+          this.style.opacity = '0.6';
+          setTimeout(() => {
+            this.style.opacity = '1';
+          }, 800);
+        }
+      });
+      
+      // Random colors button in Basic tab (same functionality)
+      el('btnRandomColorsBasic').addEventListener('click', function() {
+        const activeThumb = document.querySelector('.thumbnail.active');
+        if (activeThumb) {
+          const backgroundIndex = parseInt(activeThumb.dataset.index);
+          const backgroundUrl = backgrounds[backgroundIndex].url;
+          autoAdjustColors(backgroundUrl);
+          
+          // Visual feedback with same text length
+          const originalText = this.textContent;
+          this.style.opacity = '0.6';
+          setTimeout(() => {
+            this.style.opacity = '1';
+          }, 800);
+        }
       });
       
       // Custom background upload
@@ -1250,6 +1366,9 @@
             document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
             document.querySelector(`.thumbnail[data-index="0"]`).classList.add('active');
             timeCard.style.backgroundImage = `url('${imageUrl}')`;
+            
+            // Auto-adjust colors for uploaded background
+            autoAdjustColors(imageUrl);
           };
           reader.readAsDataURL(file);
         }
@@ -1287,12 +1406,6 @@
               const clonedOverlay = clonedDoc.querySelector('.download-overlay');
               if (clonedOverlay) {
                 clonedOverlay.remove();
-              }
-              
-              // Hide position indicator dot
-              const positionIndicator = clonedDoc.querySelector('.position-indicator');
-              if (positionIndicator) {
-                positionIndicator.style.display = 'none';
               }
             }
           }).then(canvas => {
