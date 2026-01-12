@@ -44,12 +44,8 @@ You can visit their channel [CuriousMarc](https://www.youtube.com/c/Curiousmarc)
 Plans for future development include:
 
 - **Custom font options**: Allow users to choose between different font styles beyond the default "Some Time Later" font
-- **Animation effects**: Add animated transitions when displaying the time cards
 - **Export formats**: Support for additional export formats beyond PNG (such as JPG, GIF, or video formats)
-- **Advanced text effects**: Add options for text outlines, gradient text, and other decorative effects
 - **More keyboard shortcuts**: Expand keyboard shortcuts for additional common operations
-- **Batch processing**: Create multiple time cards at once
-- **Templates library**: Pre-made templates for different video styles
 
 ## Technologies Used
 
@@ -57,6 +53,12 @@ Plans for future development include:
 - CSS3
 - JavaScript (Vanilla)
 - html2canvas (for image export)
+
+## Development Notes
+
+This application was created using **vibe coding** methodology with the assistance of **Claude Sonnet 4.5**. The development process involved iterative improvements and real-time collaboration between human creativity and AI assistance.
+
+The repository includes context files (`claude.md` and `fullstack-mode.md`) that help maintain development context and coding standards across sessions. These files are gitignored as they serve as personal development aids.
 
 ## License
 
