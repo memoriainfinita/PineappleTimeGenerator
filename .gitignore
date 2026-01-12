@@ -29,5 +29,6 @@ yarn-error.log*
 notes.txt
 TODO.txt
 
-# Claude/AI context files (optional, uncomment if needed)
-# claude.md
+# Claude/AI context files
+claude.md
+fullstack-mode.md

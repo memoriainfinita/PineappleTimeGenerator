@@ -12,17 +12,24 @@ Pineapple Time Generator is a web application that allows you to easily create t
 - **Random phrases**: Generate random phrases in the style of "3 Days Later..." with one click
 - **Predefined backgrounds**: Includes a collection of original marine backgrounds from the series
 - **Custom backgrounds**: Upload your own backgrounds to customize your time cards
-- **Customizable style**: Adjust text size, text color, and shadow
+- **Smart color system**: Auto-contrast feature that analyzes background brightness and automatically adjusts text and shadow colors for optimal visibility
+- **Customizable style**: Adjust text size (with +/- buttons), text color, and shadow
+- **Drag & drop positioning**: Intuitively reposition text by dragging it directly on the screen
+- **Safe area margins**: Respects video-safe margins for professional production
 - **Two formats**: Switch between 16:9 and 4:3 aspect ratios
-- **Easy download**: Save your creations as PNG images
+- **Favorites system**: Save and load your favorite preset combinations
+- **Easy download**: Save your creations as clean PNG images (no borders, perfect for video editing)
 
 ## How to Use
 
 1. Write your text or select a phrase from the dropdown menu
 2. Choose a background from the gallery or upload your own
-3. Adjust the style (size, color, etc.) according to your preferences
-4. Change the aspect ratio if necessary (16:9 or 4:3)
-5. Click "Download" to save your time card as a PNG image
+3. Use "Random Colors" to automatically adjust text colors based on background brightness, or customize manually
+4. Adjust the style (size with +/- buttons or slider, colors, etc.) according to your preferences
+5. Drag the text directly on screen to reposition it, or use the sliders for precise control
+6. Change the aspect ratio if necessary (16:9 or 4:3)
+7. Save your design as a favorite for quick access later
+8. Click "Download" to save your time card as a clean PNG image
 
 ## Special Dedication
 
@@ -38,11 +45,11 @@ Plans for future development include:
 
 - **Custom font options**: Allow users to choose between different font styles beyond the default "Some Time Later" font
 - **Animation effects**: Add animated transitions when displaying the time cards
-- **Favorite presets**: Save favorite text and background combinations for quick access
-- **Text positioning**: Add options to adjust the text placement within the time card
-- **Export formats**: Support for additional export formats beyond PNG (such as JPG, GIF)
+- **Export formats**: Support for additional export formats beyond PNG (such as JPG, GIF, or video formats)
 - **Advanced text effects**: Add options for text outlines, gradient text, and other decorative effects
-- **Keyboard shortcuts**: Add keyboard shortcuts for common operations
+- **More keyboard shortcuts**: Expand keyboard shortcuts for additional common operations
+- **Batch processing**: Create multiple time cards at once
+- **Templates library**: Pre-made templates for different video styles
 
 ## Technologies Used
 

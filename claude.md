@@ -28,17 +28,25 @@ A SpongeBob-themed time card generator inspired by the iconic title cards from t
 - Minimal, clean code structure
 - Mobile-responsive design
 
-## Current Branch: feature/improvements
-Working on enhancements to the base application.
+## Current Branch: main
+Latest improvements merged from feature/improvements branch.
+
+## Recently Implemented ✅
+1. ✅ Smart auto-contrast system (analyzes background brightness)
+2. ✅ Drag & drop text positioning
+3. ✅ Font size +/- buttons
+4. ✅ Improved UI legibility (system font for controls)
+5. ✅ Clean exports (no TV border)
+6. ✅ Safe area margins for video production
+7. ✅ Responsive thumbnail grid layout
+8. ✅ Favorites system fully functional
 
 ## Pending Improvements (To Discuss)
-1. Better position indicator visibility
-2. More SpongeBob phrases
-3. Style presets (color combinations)
-4. Transition animations
-5. Export/Import favorites
-6. Additional keyboard shortcuts
-7. Aspect ratio preview
+1. Custom font options
+2. Animation effects
+3. Batch processing
+4. Templates library
+5. Additional export formats (JPG, GIF, video)
 
 ## Development Notes
 - Always test position indicator visibility
