@@ -1,5 +1,8 @@
 # Pineapple Time Generator
 
+[![Live demo](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://memoriainfinita.github.io/PinnapleTimeGenerator/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+
 ## Description
 
 Pineapple Time Generator is a web application that allows you to easily create time cards in the style of the animated series featuring a yellow sea sponge. This tool is designed to create visually appealing time transitions that you can use in your videos or presentations.
