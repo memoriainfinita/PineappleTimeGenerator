@@ -392,6 +392,7 @@ async function _getImageBrightness(url) {
 
   return new Promise(resolve => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -951,8 +952,8 @@ function exportPNG() {
 
   html2canvas(_card, {
     scale:      2,
-    useCORS:    false,
-    allowTaint: true,
+    useCORS:    true,
+    allowTaint: false,
     // downloadOverlay is outside _card (sibling of timeCard inside cardContainer),
     // so it never appears in the capture. onclone is kept as safety net.
     onclone: cloned => {
