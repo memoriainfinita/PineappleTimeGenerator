@@ -4,7 +4,7 @@
 
 **Goal:** Rewrite the app in tres archivos separados (index.html / style.css / app.js) con arquitectura state-driven limpia que corrige todos los bugs conocidos de v1.
 
-**Architecture:** Un objeto `state` central, mutado únicamente via `setState(patch)` que siempre llama `render()`. Init es la única excepción (mutación directa + un solo render). DOM siempre derivado del state. El strip de fondos solo se reconstruye cuando cambian los fondos o el índice activo — no en cada keypress.
+**Architecture:** Un objeto `state` central, mutado únicamente via `setState(patch)` que siempre llama `render()`. Init es la única excepción (mutación directa + un solo render). DOM siempre derivado del state. El strip de fondos y la lista de favoritos solo se reconstruyen cuando cambian sus datos — no en cada keypress.
 
 **Tech Stack:** Vanilla JS ES2020+, CSS custom properties, html2canvas CDN, "Some Time Later" font CDN, localStorage.
 
@@ -24,6 +24,21 @@
 | `style.css` | Todo el CSS — custom properties, layout, card, strip, panel, modals, toasts |
 | `app.js` | Todo el JS — Data, Utils, State, Render, Events, Init |
 | `tests/test-utils.html` | Test harness de browser para funciones puras |
+
+---
+
+## Task 0: Crear rama de trabajo
+
+**Files:** ninguno
+
+- [ ] **Step 0.1: Crear y cambiar a rama feat/v2-rewrite**
+
+```bash
+git checkout -b feat/v2-rewrite
+git status
+```
+
+Esperado: `On branch feat/v2-rewrite`, working tree clean.
 
 ---
 
@@ -271,10 +286,11 @@ main {
   transform: translate(-50%, -50%);
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  /* left, top, font-size, text-align, color, text-shadow set by render() */
+  /* left, top, font-size, text-align set by renderCard() */
 }
 
-/* Download overlay */
+/* Download overlay — positioned on cardContainer, not timeCard.
+   html2canvas captures timeCard only, so overlay never appears in export. */
 .download-overlay {
   position: absolute;
   inset: 0;
@@ -410,7 +426,7 @@ main {
   padding-bottom: 0.5rem;
 }
 
-/* [hidden] takes precedence — browser default */
+/* [hidden] attribute takes precedence — no extra CSS needed */
 
 .panel-section {
   display: flex;
@@ -503,6 +519,9 @@ input[type="color"] {
 
 .fav-save-row { display: flex; gap: 0.4rem; }
 .fav-save-row input { flex: 1; }
+
+/* Error state for name input */
+#favNameInput.error { border-color: var(--patrick-pink); }
 
 .fav-error { font-size: 0.8rem; color: var(--patrick-pink); }
 
@@ -750,7 +769,7 @@ function generateLightColor() {
 // --- Toast ---
 // Undo toasts stack (up to 3). All other toasts replace the current one.
 
-const _regularToastEl = { el: null, timer: null };
+const _regularToast = { el: null, timer: null };
 
 function toast(message, { type = 'default', undoCallback = null } = {}) {
   const container = document.getElementById('toastContainer');
@@ -759,7 +778,6 @@ function toast(message, { type = 'default', undoCallback = null } = {}) {
     // Undo toasts stack — max 3 visible
     const existing = container.querySelectorAll('.toast.undo');
     if (existing.length >= 3) existing[0].remove();
-
     const t = _buildToast(message, 'undo', undoCallback);
     container.appendChild(t);
     setTimeout(() => t.remove(), 5000);
@@ -767,18 +785,18 @@ function toast(message, { type = 'default', undoCallback = null } = {}) {
   }
 
   // Regular toasts replace current
-  if (_regularToastEl.el) {
-    clearTimeout(_regularToastEl.timer);
-    _regularToastEl.el.remove();
+  if (_regularToast.el) {
+    clearTimeout(_regularToast.timer);
+    _regularToast.el.remove();
   }
 
   const cssClass = type === 'error' ? 'error' : '';
   const t = _buildToast(message, cssClass, null);
   container.appendChild(t);
-  _regularToastEl.el = t;
-  _regularToastEl.timer = setTimeout(() => {
+  _regularToast.el = t;
+  _regularToast.timer = setTimeout(() => {
     t.remove();
-    _regularToastEl.el = null;
+    _regularToast.el = null;
   }, 3000);
 }
 
@@ -795,10 +813,7 @@ function _buildToast(message, cssClass, undoCallback) {
     const btn = document.createElement('button');
     btn.className = 'toast-undo-btn';
     btn.textContent = 'Deshacer';
-    btn.addEventListener('click', () => {
-      undoCallback();
-      t.remove();
-    });
+    btn.addEventListener('click', () => { undoCallback(); t.remove(); });
     t.appendChild(btn);
   }
 
@@ -818,7 +833,6 @@ function _buildToast(message, cssClass, undoCallback) {
     body { font-family: monospace; padding: 1rem; background: #111; color: #eee; }
     .pass { color: #8BC34A; }
     .fail { color: #FF5252; font-weight: bold; }
-    h2 { color: #FFD800; margin: 1rem 0 0.5rem; }
     #summary { margin-top: 1rem; font-size: 1.1rem; }
   </style>
 </head>
@@ -826,9 +840,8 @@ function _buildToast(message, cssClass, undoCallback) {
 <h1>Utils Tests</h1>
 <div id="output"></div>
 <div id="summary"></div>
-
 <script>
-// Inline the functions under test (copy from app.js Utils section)
+// Inline copies of the functions under test (keep in sync with app.js Utils)
 const DARK_PALETTE  = ['#3e1600', '#1a0a00', '#0d1b2a', '#1b2a1b', '#2a0a2a'];
 const LIGHT_PALETTE = ['#ffeb99', '#ffe566', '#fff4cc', '#ffd700', '#fff8e1'];
 
@@ -859,22 +872,21 @@ assert('clamp(5, 5, 95) = 5',   clamp(5,  5, 95) === 5);
 assert('clamp(4, 5, 95) = 5',   clamp(4,  5, 95) === 5);
 
 // roundOneDecimal
-assert('round(3.05) = 3.1',  roundOneDecimal(3.05) === Math.round(3.05*10)/10);
 assert('round(3.00) = 3',    roundOneDecimal(3.00) === 3);
-assert('round(7.99) = 8',    roundOneDecimal(7.99) === Math.round(7.99*10)/10);
+assert('round(7.95) → 8.0',  roundOneDecimal(7.95) === Math.round(7.95*10)/10);
+assert('round(0.55) → 0.6',  roundOneDecimal(0.55) === Math.round(0.55*10)/10);
 
 // colorBrightness
-assert('white = 255',         Math.round(colorBrightness('#ffffff')) === 255);
-assert('black = 0',           Math.round(colorBrightness('#000000')) === 0);
-assert('yellow brightness > 128', colorBrightness('#FFD800') > 128);
-assert('#3e1600 brightness < 128', colorBrightness('#3e1600') < 128);
+assert('white = 255',               Math.round(colorBrightness('#ffffff')) === 255);
+assert('black = 0',                 Math.round(colorBrightness('#000000')) === 0);
+assert('yellow (#FFD800) > 128',    colorBrightness('#FFD800') > 128);
+assert('#3e1600 < 128',             colorBrightness('#3e1600') < 128);
 
-// generateDarkColor — must be in DARK_PALETTE
+// generateDarkColor — always returns from DARK_PALETTE
 for (let i = 0; i < 20; i++) {
   assert(`generateDarkColor() #${i} in DARK_PALETTE`, DARK_PALETTE.includes(generateDarkColor()));
 }
-
-// generateLightColor — must be in LIGHT_PALETTE
+// generateLightColor — always returns from LIGHT_PALETTE
 for (let i = 0; i < 20; i++) {
   assert(`generateLightColor() #${i} in LIGHT_PALETTE`, LIGHT_PALETTE.includes(generateLightColor()));
 }
@@ -887,7 +899,7 @@ document.getElementById('summary').textContent = `${passed} passed, ${failed} fa
 
 - [ ] **Step 2.4: Abrir tests/test-utils.html en browser**
 
-Verificar: todos los asserts pasan (✓ verde). Si alguno falla, corregir la función antes de continuar.
+Verificar: todos los asserts pasan (✓ verde). Si alguno falla, corregir antes de continuar.
 
 - [ ] **Step 2.5: Commit**
 
@@ -912,30 +924,31 @@ Append al final de `app.js`:
 // --- State ---
 // =============================================================
 
-const LS_FAVORITES  = 'pineapple_v2_favorites';
-const LS_CUSTOM_BGS = 'pineapple_v2_custom_bgs';
-const LS_UI         = 'pineapple_v2_ui';
+const LS_FAVORITES   = 'pineapple_v2_favorites';
+const LS_CUSTOM_BGS  = 'pineapple_v2_custom_bgs';
+const LS_UI          = 'pineapple_v2_ui';
 const MAX_CUSTOM_BGS = 5;
 
 const state = {
-  text:             '',
-  backgroundIndex:  0,
+  text:              '',
+  backgroundIndex:   0,
   customBackgrounds: [],   // base64 URLs; max MAX_CUSTOM_BGS
-  fontSize:         3,     // em; range [0.5, 8]
-  textColor:        '#3e1600',
-  shadowColor:      '#ffeb99',
-  positionX:        50,    // [5, 95]
-  positionY:        50,    // [5, 95]
-  textAlign:        'center',
-  ratio:            '16:9',
-  advancedOpen:     false,
+  fontSize:          3,    // em; range [0.5, 8]
+  textColor:         '#3e1600',
+  shadowColor:       '#ffeb99',
+  positionX:         50,   // [5, 95]
+  positionY:         50,   // [5, 95]
+  textAlign:         'center',
+  ratio:             '16:9',
+  advancedOpen:      false,
 };
 
-// Favorites are NOT in state — managed separately
+// Favorites are NOT in state — managed separately to avoid
+// rebuilding the favorites list on every keystroke.
 let favorites = [];
 
 // --- setState ---
-// Rule: ALL event handlers mutate state through setState().
+// Rule: ALL event handlers and async callbacks mutate state through setState().
 // Exception: init() mutates state directly and calls render() once.
 
 function setState(patch) {
@@ -981,7 +994,7 @@ function loadFromLS(key, fallback) {
 
 - [ ] **Step 3.2: Verificar en consola de browser**
 
-Abrir `index.html`. En consola pegar:
+Abrir `index.html`. En consola:
 
 ```js
 console.assert(state.positionX === 50, 'positionX default');
@@ -1016,7 +1029,7 @@ Append a `app.js`:
 // --- Render ---
 // =============================================================
 
-// DOM refs (populated in init after DOMContentLoaded)
+// DOM refs — populated in init() after DOMContentLoaded
 let _card, _strip, _overlay, _textarea;
 
 function renderCard() {
@@ -1024,9 +1037,10 @@ function renderCard() {
   const bg  = bgs[state.backgroundIndex] || bgs[0];
 
   _card.style.backgroundImage = `url('${bg.url}')`;
-  _card.className = state.ratio === '4:3' ? 'ratio-4-3' : '';
+  // Use classList.toggle to avoid clobbering other potential classes
+  _card.classList.toggle('ratio-4-3', state.ratio === '4:3');
 
-  // Text wrapper — update in place, never replace
+  // Text wrapper — update in place, never replace the element
   let wrapper = _card.querySelector('.text-wrapper');
   if (!wrapper) {
     wrapper = document.createElement('div');
@@ -1034,7 +1048,6 @@ function renderCard() {
     _card.appendChild(wrapper);
   }
 
-  // textContent safe for pre-wrap rendering; avoids XSS
   wrapper.textContent = state.text || '';
   wrapper.style.left      = `${state.positionX}%`;
   wrapper.style.top       = `${state.positionY}%`;
@@ -1052,7 +1065,7 @@ function renderCard() {
 Append a `app.js`:
 
 ```js
-// Strip dirty-check — avoids scroll reset on text/color changes
+// Strip dirty-check — avoids rebuilding on text/color/position changes
 const _stripPrev = { customLength: -1, backgroundIndex: -1 };
 
 function renderStrip() {
@@ -1062,19 +1075,19 @@ function renderStrip() {
 
   if (!changed) return;
 
-  _stripPrev.customLength   = state.customBackgrounds.length;
+  _stripPrev.customLength    = state.customBackgrounds.length;
   _stripPrev.backgroundIndex = state.backgroundIndex;
 
-  const bgs      = allBackgrounds();
+  const bgs       = allBackgrounds();
   const uploadBtn = document.getElementById('btnBgUpload');
 
-  // Remove old thumbnail wrappers (keep upload button)
+  // Remove existing thumbnails and separators; keep the upload button
   _strip.querySelectorAll('.thumbnail-wrapper, .strip-separator').forEach(el => el.remove());
 
   const hasCustom = state.customBackgrounds.length > 0;
 
   bgs.forEach((bg, i) => {
-    // Separator between custom and preset
+    // Separator between custom and preset sections
     if (hasCustom && i === state.customBackgrounds.length) {
       const sep = document.createElement('div');
       sep.className = 'strip-separator';
@@ -1104,7 +1117,7 @@ function renderStrip() {
     _strip.insertBefore(wrapper, uploadBtn);
   });
 
-  // Scroll active thumbnail into view
+  // Scroll active thumbnail into view after rebuild
   const activeThumb = _strip.querySelector('.thumbnail.active');
   if (activeThumb) {
     activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -1112,14 +1125,23 @@ function renderStrip() {
 }
 ```
 
-- [ ] **Step 4.3: Añadir renderControls()**
+- [ ] **Step 4.3: Añadir renderFavoritesList() con dirty-check y renderControls()**
 
 Append a `app.js`:
 
 ```js
+// Favorites list dirty-check — avoids rebuilding on every keypress
+const _favPrev = { count: -1, ids: '' };
+
 function renderFavoritesList() {
   const list = document.getElementById('favoritesList');
   if (!list) return;
+
+  // Cheap dirty-check: compare count + concatenated ids
+  const currentIds = favorites.map(f => f.id).join(',');
+  if (favorites.length === _favPrev.count && currentIds === _favPrev.ids) return;
+  _favPrev.count = favorites.length;
+  _favPrev.ids   = currentIds;
 
   list.innerHTML = '';
 
@@ -1164,7 +1186,7 @@ function renderFavoritesList() {
 
 function renderControls() {
   // Font size
-  const slider = document.getElementById('sliderFontSize');
+  const slider  = document.getElementById('sliderFontSize');
   const display = document.getElementById('fontSizeDisplay');
   if (slider)  slider.value = state.fontSize;
   if (display) display.textContent = `${state.fontSize.toFixed(1)}em`;
@@ -1186,7 +1208,7 @@ function renderControls() {
   if (colorText)   colorText.value   = state.textColor;
   if (colorShadow) colorShadow.value = state.shadowColor;
 
-  // Ratio button
+  // Ratio button label
   const btnRatio = document.getElementById('btnRatio');
   if (btnRatio) btnRatio.textContent =
     state.ratio === '16:9' ? '16:9 → 4:3' : '4:3 → 16:9';
@@ -1195,7 +1217,7 @@ function renderControls() {
   const panel = document.getElementById('advancedPanel');
   if (panel) panel.hidden = !state.advancedOpen;
 
-  // Textarea — skip update if focused (prevents cursor jump)
+  // Textarea — skip if focused to prevent cursor jump while typing
   if (_textarea && document.activeElement !== _textarea) {
     _textarea.value = state.text;
   }
@@ -1218,7 +1240,7 @@ function render() {
 
 - [ ] **Step 4.5: Verificar render en consola**
 
-Abrir `index.html`. En la consola, tras que app.js cargue:
+Abrir `index.html`. En consola, asignar DOM refs manualmente y llamar render:
 
 ```js
 _card     = document.getElementById('timeCard');
@@ -1227,7 +1249,7 @@ _overlay  = document.getElementById('downloadOverlay');
 _textarea = document.getElementById('textInput');
 
 state.text = 'Three Days Later';
-state.backgroundIndex = 2;  // frankendoodle
+state.backgroundIndex = 2;  // Frankendoodle
 render();
 ```
 
@@ -1280,8 +1302,7 @@ async function _getImageBrightness(url) {
         _brightnessCache.set(url, brightness);
         resolve(brightness);
       } catch (_) {
-        // CORS/taint error — fallback to 128 (neutral)
-        _brightnessCache.set(url, 128);
+        _brightnessCache.set(url, 128); // CORS/taint fallback
         resolve(128);
       }
     };
@@ -1293,7 +1314,7 @@ async function _getImageBrightness(url) {
 async function autoAdjustColors(url) {
   const brightness = await _getImageBrightness(url);
 
-  // Race condition guard: discard if background changed while we were loading
+  // Race condition guard: discard if user changed background while loading
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (!currentBg || currentBg.url !== url) return;
 
@@ -1305,8 +1326,6 @@ async function autoAdjustColors(url) {
 function randomColorsForCurrentBg() {
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (!currentBg) return;
-
-  // Use cached brightness; fallback to 128 if not yet cached
   const brightness = _brightnessCache.get(currentBg.url) ?? 128;
   const textColor   = brightness < 128 ? generateLightColor() : generateDarkColor();
   const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
@@ -1316,23 +1335,25 @@ function randomColorsForCurrentBg() {
 
 - [ ] **Step 5.2: Verificar color system en browser**
 
-En consola (con index.html abierto y render manual del paso anterior):
+En consola (con DOM refs asignados del paso 4.5):
 
 ```js
-// Debe resolverse y cambiar colores del card
 autoAdjustColors('backgrounds/band-geeks.jpg').then(() => {
-  console.log('textColor:', state.textColor, '— debe estar en LIGHT_PALETTE o DARK_PALETTE');
-  console.log('shadowColor:', state.shadowColor);
+  const inLight = ['#ffeb99','#ffe566','#fff4cc','#ffd700','#fff8e1'];
+  const inDark  = ['#3e1600','#1a0a00','#0d1b2a','#1b2a1b','#2a0a2a'];
+  console.assert(inLight.includes(state.textColor) || inDark.includes(state.textColor),
+    'textColor in palette');
+  console.log('Colors OK — textColor:', state.textColor, 'shadowColor:', state.shadowColor);
 });
 ```
 
-Esperado: los colores cambian en el card y pertenecen a las paletas curadas.
+Esperado: colores en paleta, card actualizado.
 
 - [ ] **Step 5.3: Commit**
 
 ```bash
 git add app.js
-git commit -m "feat: add color system (autoAdjustColors, brightness cache, race guard)"
+git commit -m "feat: add color system (autoAdjustColors, cache, race guard, curated palettes)"
 ```
 
 ---
@@ -1344,7 +1365,9 @@ git commit -m "feat: add color system (autoAdjustColors, brightness cache, race 
 
 - [ ] **Step 6.1: Añadir función init()**
 
-Append a `app.js`:
+Append a `app.js`.
+
+> **Nota:** init() no llama `wireEvents()` todavía — esa función no existe hasta Task 9. Se añade el placeholder de llamada en Task 9.
 
 ```js
 // =============================================================
@@ -1358,30 +1381,27 @@ function init() {
   _overlay  = document.getElementById('downloadOverlay');
   _textarea = document.getElementById('textInput');
 
-  // Load persisted state (all try/catch in loadFromLS)
-  const savedUI      = loadFromLS(LS_UI, {});
-  const savedCustom  = loadFromLS(LS_CUSTOM_BGS, []);
-  favorites          = loadFromLS(LS_FAVORITES, []);
+  // Load all persisted data (each read is individually try/catch via loadFromLS)
+  const savedUI     = loadFromLS(LS_UI, {});
+  const savedCustom = loadFromLS(LS_CUSTOM_BGS, []);
+  favorites         = loadFromLS(LS_FAVORITES, []);
 
-  // Batch state mutations — one render() at the end
-  state.advancedOpen     = savedUI.advancedOpen ?? false;
-  state.customBackgrounds = Array.isArray(savedCustom) ? savedCustom : [];
+  // Compute all init values upfront
+  const customBackgrounds = Array.isArray(savedCustom) ? savedCustom : [];
+  const advancedOpen      = savedUI.advancedOpen ?? false;
+  const text              = _randomPhrase('');
+  const totalBgs          = customBackgrounds.length + backgroundPresets.length;
+  const backgroundIndex   = Math.floor(Math.random() * totalBgs);
 
-  // Random phrase (exclude current — on first load, current is '')
-  state.text = _randomPhrase(state.text);
-
-  // Random background index
-  state.backgroundIndex = Math.floor(Math.random() * allBackgrounds().length);
-
-  // Single render
+  // Single batch mutation — one render() at the end (spec requirement)
+  Object.assign(state, { customBackgrounds, advancedOpen, text, backgroundIndex });
   render();
 
-  // Async: update colors once image brightness resolves
+  // Async color update — fires setState when image brightness resolves
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (currentBg) autoAdjustColors(currentBg.url);
 
-  // Wire all event listeners
-  wireEvents();
+  // wireEvents() — added in Task 9
 }
 
 function _randomPhrase(current) {
@@ -1398,7 +1418,8 @@ Append a `app.js`:
 
 ```js
 // --- Persistence helpers ---
-// Call these after mutations that need to be saved.
+// Call these explicitly after mutations that need to be saved.
+// NOT called automatically in setState — only persists what changed.
 
 function persistUI() {
   saveToLS(LS_UI, { advancedOpen: state.advancedOpen });
@@ -1418,14 +1439,14 @@ function persistFavorites() {
 Recargar `index.html`. Verificar:
 - Card muestra un fondo aleatorio
 - Card muestra un texto aleatorio de la lista de frases
-- No hay errores en consola
+- No hay errores en consola (aunque no haya interactividad aún — wireEvents no existe)
 - Recargar varias veces → fondo y frase cambian aleatoriamente
 
 - [ ] **Step 6.4: Commit**
 
 ```bash
 git add app.js
-git commit -m "feat: add init, localStorage persistence helpers"
+git commit -m "feat: add init (batch Object.assign), localStorage persistence helpers"
 ```
 
 ---
@@ -1435,9 +1456,9 @@ git commit -m "feat: add init, localStorage persistence helpers"
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 7.1: Añadir lógica de drag con ratón**
+- [ ] **Step 7.1: Añadir initMouseDrag()**
 
-Append a `app.js` (dentro o antes de `wireEvents` — lo ponemos aquí y llamaremos desde wireEvents):
+Append a `app.js`:
 
 ```js
 // =============================================================
@@ -1449,7 +1470,6 @@ function initMouseDrag() {
   let lastX, lastY;
 
   _card.addEventListener('mousedown', e => {
-    // Ignore clicks on the remove-bg buttons if somehow inside card
     if (e.target.classList.contains('btn-remove-bg')) return;
     dragging = true;
     lastX = e.clientX;
@@ -1465,7 +1485,6 @@ function initMouseDrag() {
     const dy = (e.clientY - lastY) / rect.height * 100;
     lastX = e.clientX;
     lastY = e.clientY;
-
     setState({
       positionX: clamp(state.positionX + dx, 5, 95),
       positionY: clamp(state.positionY + dy, 5, 95),
@@ -1480,22 +1499,24 @@ function initMouseDrag() {
 }
 ```
 
-- [ ] **Step 7.2: Llamar initMouseDrag desde wireEvents**
+- [ ] **Step 7.2: Llamar initMouseDrag() desde init() temporalmente**
 
-Añadir al cuerpo de `wireEvents()` (que crearemos en Task 9). Por ahora: llamar directamente al final de `init()`:
+Editar `init()` — añadir `initMouseDrag()` justo antes del comentario `// wireEvents() — added in Task 9`:
 
 ```js
-// Al final de init(), antes de wireEvents():
-initMouseDrag();
+  // Drag (temporary — moved inside wireEvents() in Task 9)
+  initMouseDrag();
+
+  // wireEvents() — added in Task 9
 ```
 
 - [ ] **Step 7.3: Verificar drag en browser**
 
-Recargar. Hacer click y arrastrar el texto por el card. Verificar:
+Recargar. Arrastrar el texto con el ratón. Verificar:
 - El texto sigue al ratón
-- Al soltar, el texto queda en la nueva posición
+- Al soltar queda en la nueva posición
 - No se selecciona texto del documento durante el drag
-- El texto nunca sale del card
+- El texto no sale del card
 
 - [ ] **Step 7.4: Commit**
 
@@ -1511,7 +1532,7 @@ git commit -m "feat: add mouse drag for text positioning"
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 8.1: Añadir lógica de drag táctil**
+- [ ] **Step 8.1: Añadir initTouchDrag()**
 
 Append a `app.js`:
 
@@ -1524,44 +1545,44 @@ function initTouchDrag() {
   let lastTX, lastTY;
 
   _card.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;  // multi-touch: ignorar
+    if (e.touches.length !== 1) return;
     lastTX = e.touches[0].clientX;
     lastTY = e.touches[0].clientY;
   }, { passive: true });
 
   _card.addEventListener('touchmove', e => {
     if (e.touches.length !== 1) return;
-    e.preventDefault();  // bloquea scroll de página durante drag
-
+    e.preventDefault(); // blocks page scroll during drag
     const rect = _card.getBoundingClientRect();
     const dx = (e.touches[0].clientX - lastTX) / rect.width  * 100;
     const dy = (e.touches[0].clientY - lastTY) / rect.height * 100;
     lastTX = e.touches[0].clientX;
     lastTY = e.touches[0].clientY;
-
     setState({
       positionX: clamp(state.positionX + dx, 5, 95),
       positionY: clamp(state.positionY + dy, 5, 95),
     });
-  }, { passive: false });  // passive:false requerido para preventDefault
+  }, { passive: false }); // passive:false required for preventDefault
 }
 ```
 
-- [ ] **Step 8.2: Llamar initTouchDrag desde init()**
+- [ ] **Step 8.2: Llamar initTouchDrag() desde init() temporalmente**
 
-En `init()`, junto a `initMouseDrag()`:
+Editar `init()` — añadir `initTouchDrag()` junto a `initMouseDrag()`:
 
 ```js
-initMouseDrag();
-initTouchDrag();
+  initMouseDrag();
+  initTouchDrag();
+
+  // wireEvents() — added in Task 9
 ```
 
-- [ ] **Step 8.3: Verificar en móvil (o DevTools touch mode)**
+- [ ] **Step 8.3: Verificar en DevTools touch mode**
 
-En Chrome DevTools → Toggle device toolbar. Arrastrar el texto con un dedo. Verificar:
+Chrome DevTools → Toggle device toolbar (Ctrl+Shift+M). Arrastrar el texto. Verificar:
 - El texto sigue el dedo
-- La página NO hace scroll mientras se arrastra sobre el card
-- El texto queda en la posición al levantar el dedo
+- La página NO scrollea durante el drag en el card
+- El texto queda en la posición al levantar
 
 - [ ] **Step 8.4: Commit**
 
@@ -1572,14 +1593,14 @@ git commit -m "feat: add touch drag (passive:false, single-finger)"
 
 ---
 
-## Task 9: app.js — Advanced panel wiring + wireEvents()
+## Task 9: app.js — wireEvents() + Advanced panel
 
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 9.1: Crear wireEvents() con todos los controles del panel**
+- [ ] **Step 9.1: Añadir wireEvents()**
 
-Append a `app.js`. Esto REEMPLAZA las llamadas directas a `initMouseDrag()` e `initTouchDrag()` en init (quitar esas líneas directas de init y llamar sólo a `wireEvents()`):
+Append a `app.js`. wireEvents() llama a initMouseDrag/initTouchDrag internamente, por lo que las llamadas temporales en init() se eliminarán en el paso siguiente.
 
 ```js
 // =============================================================
@@ -1587,7 +1608,7 @@ Append a `app.js`. Esto REEMPLAZA las llamadas directas a `initMouseDrag()` e `i
 // =============================================================
 
 function wireEvents() {
-  // Drag
+  // Drag (replaces temporary calls in init)
   initMouseDrag();
   initTouchDrag();
 
@@ -1602,9 +1623,8 @@ function wireEvents() {
 
   document.getElementById('btnDownload').addEventListener('click', exportPNG);
 
-  // --- Background strip ---
+  // --- Background strip (event delegation) ---
   _strip.addEventListener('click', e => {
-    // Thumbnail click
     const thumb = e.target.closest('.thumbnail');
     if (thumb) {
       const idx = parseInt(thumb.dataset.index, 10);
@@ -1613,14 +1633,12 @@ function wireEvents() {
       if (bg) autoAdjustColors(bg.url);
       return;
     }
-    // Remove custom bg
     const rmBtn = e.target.closest('.btn-remove-bg');
     if (rmBtn) {
       removeCustomBg(parseInt(rmBtn.dataset.index, 10));
       return;
     }
-    // Upload button
-    if (e.target.id === 'btnBgUpload' || e.target.closest('#btnBgUpload')) {
+    if (e.target.closest('#btnBgUpload')) {
       document.getElementById('bgUploadInput').click();
     }
   });
@@ -1628,7 +1646,7 @@ function wireEvents() {
   document.getElementById('bgUploadInput').addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) uploadCustomBg(file);
-    e.target.value = '';  // allow re-selecting same file
+    e.target.value = '';
   });
 
   // --- Advanced panel toggle ---
@@ -1637,16 +1655,21 @@ function wireEvents() {
     persistUI();
   });
 
-  // Escape closes panel (if modal not open)
+  // Keyboard: Escape + Ctrl+S
+  // Single listener handles both — avoids duplicate listener bugs.
   document.addEventListener('keydown', e => {
+    const modalOpen = !document.getElementById('importModal').hidden;
+
     if (e.key === 'Escape') {
-      if (!document.getElementById('importModal').hidden) return; // modal handles Escape
-      if (state.advancedOpen) {
+      if (modalOpen) {
+        cancelImport();  // modal takes priority
+      } else if (state.advancedOpen) {
         setState({ advancedOpen: false });
         persistUI();
       }
+      return;
     }
-    // Ctrl+S — open panel, focus favorites
+
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       if (!state.advancedOpen) {
@@ -1663,22 +1686,18 @@ function wireEvents() {
   document.getElementById('colorText').addEventListener('input', e => {
     setState({ textColor: e.target.value });
   });
-
   document.getElementById('colorShadow').addEventListener('input', e => {
     setState({ shadowColor: e.target.value });
   });
-
   document.getElementById('btnRandomColors').addEventListener('click', randomColorsForCurrentBg);
 
   // --- Font size ---
   document.getElementById('sliderFontSize').addEventListener('input', e => {
     setState({ fontSize: roundOneDecimal(parseFloat(e.target.value)) });
   });
-
   document.getElementById('btnFontMinus').addEventListener('click', () => {
     setState({ fontSize: roundOneDecimal(clamp(state.fontSize - 0.1, 0.5, 8)) });
   });
-
   document.getElementById('btnFontPlus').addEventListener('click', () => {
     setState({ fontSize: roundOneDecimal(clamp(state.fontSize + 0.1, 0.5, 8)) });
   });
@@ -1687,17 +1706,12 @@ function wireEvents() {
   document.getElementById('sliderX').addEventListener('input', e => {
     setState({ positionX: parseInt(e.target.value, 10) });
   });
-
   document.getElementById('sliderY').addEventListener('input', e => {
     setState({ positionY: parseInt(e.target.value, 10) });
   });
-
   document.querySelectorAll('.btn-align').forEach(btn => {
-    btn.addEventListener('click', () => {
-      setState({ textAlign: btn.dataset.align });
-    });
+    btn.addEventListener('click', () => setState({ textAlign: btn.dataset.align }));
   });
-
   document.getElementById('btnResetPosition').addEventListener('click', () => {
     setState({ positionX: 50, positionY: 50, textAlign: 'center' });
   });
@@ -1713,9 +1727,8 @@ function wireEvents() {
   document.getElementById('favoritesList').addEventListener('click', e => {
     const loadBtn = e.target.closest('.btn-load-fav');
     if (loadBtn) { loadFavorite(parseInt(loadBtn.dataset.id, 10)); return; }
-
     const delBtn = e.target.closest('.btn-delete-fav');
-    if (delBtn)  { deleteFavorite(parseInt(delBtn.dataset.id, 10)); return; }
+    if (delBtn)  { deleteFavorite(parseInt(delBtn.dataset.id, 10)); }
   });
 
   document.getElementById('btnExportFavorites').addEventListener('click', exportFavorites);
@@ -1728,42 +1741,79 @@ function wireEvents() {
     e.target.value = '';
   });
 
-  // Import modal
-  document.getElementById('importOverlay').addEventListener('click',     cancelImport);
-  document.getElementById('btnImportCancel').addEventListener('click',   cancelImport);
-  document.getElementById('btnImportMerge').addEventListener('click',    () => confirmImport('merge'));
-  document.getElementById('btnImportReplace').addEventListener('click',  () => confirmImport('replace'));
+  // Import modal buttons
+  document.getElementById('importOverlay').addEventListener('click',    cancelImport);
+  document.getElementById('btnImportCancel').addEventListener('click',  cancelImport);
+  document.getElementById('btnImportMerge').addEventListener('click',   () => confirmImport('merge'));
+  document.getElementById('btnImportReplace').addEventListener('click', () => confirmImport('replace'));
 }
 ```
 
-- [ ] **Step 9.2: Actualizar init() para llamar wireEvents()**
+- [ ] **Step 9.2: Actualizar init() — reemplazar llamadas directas por wireEvents()**
 
-En `init()`, quitar las líneas `initMouseDrag()` e `initTouchDrag()` directas y dejar sólo:
+En `init()`, reemplazar:
 
 ```js
-wireEvents();
+  // Drag (temporary — moved inside wireEvents() in Task 9)
+  initMouseDrag();
+  initTouchDrag();
+
+  // wireEvents() — added in Task 9
 ```
 
-Al final de init(), después de `autoAdjustColors(...)`.
+por:
+
+```js
+  wireEvents();
+```
+
+La función `init()` completa debe quedar así:
+
+```js
+function init() {
+  _card     = document.getElementById('timeCard');
+  _strip    = document.getElementById('bgStrip');
+  _overlay  = document.getElementById('downloadOverlay');
+  _textarea = document.getElementById('textInput');
+
+  const savedUI     = loadFromLS(LS_UI, {});
+  const savedCustom = loadFromLS(LS_CUSTOM_BGS, []);
+  favorites         = loadFromLS(LS_FAVORITES, []);
+
+  const customBackgrounds = Array.isArray(savedCustom) ? savedCustom : [];
+  const advancedOpen      = savedUI.advancedOpen ?? false;
+  const text              = _randomPhrase('');
+  const totalBgs          = customBackgrounds.length + backgroundPresets.length;
+  const backgroundIndex   = Math.floor(Math.random() * totalBgs);
+
+  Object.assign(state, { customBackgrounds, advancedOpen, text, backgroundIndex });
+  render();
+
+  const currentBg = allBackgrounds()[state.backgroundIndex];
+  if (currentBg) autoAdjustColors(currentBg.url);
+
+  wireEvents();
+}
+```
 
 - [ ] **Step 9.3: Verificar panel y controles en browser**
 
 Recargar. Verificar:
 - "▼ Personalizar" abre y cierra el panel
-- Escape cierra el panel cuando está abierto
+- Escape cierra el panel; Escape también cierra el import modal cuando está abierto
 - Ctrl+S abre el panel y foca el input de nombre
 - Sliders de posición mueven el texto
-- Botones L/C/R cambian la alineación del texto
-- Reset vuelve el texto al centro
-- Slider de font size y botones +/− funcionan
-- 16:9/4:3 toggle cambia el aspect ratio del card
+- Botones L/C/R cambian la alineación (visible en texto de dos líneas — pulsar Enter en el textarea)
+- Reset vuelve al centro
+- Slider de font size y +/− funcionan sin float drift
+- 16:9/4:3 toggle cambia el aspect ratio
 - Color pickers actualizan el texto en tiempo real
 
 - [ ] **Step 9.4: Commit**
 
 ```bash
 git add app.js
-git commit -m "feat: wire all advanced panel events and keyboard shortcuts"
+git commit -m "feat: wire all events, keyboard shortcuts (single keydown listener)"
 ```
 
 ---
@@ -1787,33 +1837,35 @@ function uploadCustomBg(file) {
   reader.onload = e => {
     const dataUrl = e.target.result;
 
-    // Evict oldest if at limit
     if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
-      state.customBackgrounds.pop();  // remove oldest (last element)
+      state.customBackgrounds.pop(); // evict oldest
       toast('Fondo más antiguo eliminado para hacer espacio');
     }
 
-    // Prepend — new upload is always index 0
-    state.customBackgrounds.unshift(dataUrl);
+    state.customBackgrounds.unshift(dataUrl); // new upload at index 0
     persistCustomBgs();
-    setState({ backgroundIndex: 0 });
+    setState({ backgroundIndex: 0 });         // auto-select new upload
     autoAdjustColors(dataUrl);
   };
   reader.readAsDataURL(file);
 }
 
 function removeCustomBg(index) {
+  // index is position in allBackgrounds() == position in customBackgrounds[]
+  // (custom bgs are always at the start of allBackgrounds)
   const wasActive = index === state.backgroundIndex;
+
   state.customBackgrounds.splice(index, 1);
   persistCustomBgs();
 
+  // Recalculate backgroundIndex
   let newIndex = state.backgroundIndex;
   if (wasActive) {
-    // Select next available, or first preset
+    // Select next available; clamp to valid range
     newIndex = Math.min(index, allBackgrounds().length - 1);
     if (newIndex < 0) newIndex = 0;
   } else if (index < state.backgroundIndex) {
-    // Removed item was before active — shift index down
+    // Removed item was before active — shift index down by 1
     newIndex = state.backgroundIndex - 1;
   }
 
@@ -1830,10 +1882,11 @@ function removeCustomBg(index) {
 
 Recargar. Verificar:
 - Click en `+` abre el selector de archivo
-- Al seleccionar una imagen: aparece como primer thumbnail, se activa automáticamente, el card la muestra
-- El botón ✕ en thumbnails custom las elimina
-- Subir 5 imágenes: la 6ª elimina la más antigua con toast de aviso
-- Recargar la página: los fondos custom persisten
+- Al seleccionar: aparece como primer thumbnail, se autoselecciona, el card la muestra
+- ✕ en thumbnail custom elimina el fondo correctamente
+- Si el fondo eliminado era el activo, el card cambia al siguiente disponible
+- Subir 5 imágenes: la 6ª elimina la más antigua con toast
+- Recargar: los fondos custom persisten
 
 - [ ] **Step 10.3: Commit**
 
@@ -1859,23 +1912,20 @@ Append a `app.js`:
 // =============================================================
 
 function saveFavorite() {
-  const input = document.getElementById('favNameInput');
+  const input   = document.getElementById('favNameInput');
   const errorEl = document.getElementById('favNameError');
-  const name = input.value.trim();
+  const name    = input.value.trim();
 
   if (!name) {
     errorEl.hidden = false;
     input.classList.add('error');
     input.focus();
-    setTimeout(() => {
-      errorEl.hidden = true;
-      input.classList.remove('error');
-    }, 2500);
+    setTimeout(() => { errorEl.hidden = true; input.classList.remove('error'); }, 2500);
     return;
   }
 
   const bg = allBackgrounds()[state.backgroundIndex];
-  const fav = {
+  favorites.push({
     id:            Date.now(),
     name,
     text:          state.text,
@@ -1887,11 +1937,12 @@ function saveFavorite() {
     positionY:     state.positionY,
     textAlign:     state.textAlign,
     ratio:         state.ratio,
-  };
+  });
 
-  favorites.push(fav);
   persistFavorites();
   input.value = '';
+  // Invalidate dirty-check so list rebuilds
+  _favPrev.count = -1;
   renderFavoritesList();
   toast(`"${name}" guardado`);
 }
@@ -1900,15 +1951,16 @@ function loadFavorite(id) {
   const fav = favorites.find(f => f.id === id);
   if (!fav) return;
 
-  // Restore background
   const presetIdx = backgroundPresets.findIndex(p => p.url === fav.backgroundUrl);
   let bgIndex;
 
   if (presetIdx !== -1) {
-    // It's a preset — account for any custom bgs prepended
+    // Preset: account for custom bgs prepended to allBackgrounds
     bgIndex = state.customBackgrounds.length + presetIdx;
   } else if (fav.backgroundUrl) {
-    // Custom bg — re-insert if not already present
+    // Custom bg: re-insert if not already present
+    // Note: direct mutation of state.customBackgrounds here is an accepted
+    // exception — setState is called immediately after with the new bgIndex.
     let customIdx = state.customBackgrounds.indexOf(fav.backgroundUrl);
     if (customIdx === -1) {
       if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
@@ -1938,11 +1990,12 @@ function loadFavorite(id) {
 }
 
 function deleteFavorite(id) {
-  const idx  = favorites.findIndex(f => f.id === id);
+  const idx = favorites.findIndex(f => f.id === id);
   if (idx === -1) return;
 
   const removed = favorites.splice(idx, 1)[0];
   persistFavorites();
+  _favPrev.count = -1; // invalidate dirty-check
   renderFavoritesList();
 
   let undone = false;
@@ -1951,8 +2004,9 @@ function deleteFavorite(id) {
     undoCallback: () => {
       if (undone) return;
       undone = true;
-      favorites.splice(idx, 0, removed);  // re-insert at original position
+      favorites.splice(idx, 0, removed); // re-insert at original position
       persistFavorites();
+      _favPrev.count = -1;
       renderFavoritesList();
     },
   });
@@ -1962,13 +2016,12 @@ function deleteFavorite(id) {
 - [ ] **Step 11.2: Verificar favorites CRUD en browser**
 
 Recargar. Verificar:
-- Abrir panel → Favoritos
-- Intentar guardar sin nombre: aparece mensaje "Escribe un nombre"
-- Guardar con nombre: aparece en la lista (más reciente arriba)
-- Cargar un favorito: el card se restaura completamente
-- Eliminar un favorito: desaparece, toast con "Deshacer"
-- Pulsar Deshacer en el toast: el favorito reaparece en su posición original
-- Recargar la página: los favoritos persisten
+- Guardar sin nombre: mensaje "Escribe un nombre" + borde rojo en el input
+- Guardar con nombre: aparece en lista (más reciente arriba)
+- Cargar un favorito: restaura todo el state (fondo, colores, posición, ratio, texto)
+- Eliminar: desaparece, toast con "Deshacer"
+- Deshacer: reaparece en su posición original
+- Recargar: favoritos persisten
 
 - [ ] **Step 11.3: Commit**
 
@@ -1984,7 +2037,7 @@ git commit -m "feat: add favorites save/load/delete with undo"
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 12.1: Añadir exportFavorites() y lógica de import**
+- [ ] **Step 12.1: Añadir exportFavorites(), readImportFile(), cancelImport(), confirmImport()**
 
 Append a `app.js`:
 
@@ -1998,13 +2051,11 @@ function exportFavorites() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'pineapple-favorites.json';
+  a.href = url; a.download = 'pineapple-favorites.json';
   a.click();
   URL.revokeObjectURL(url);
 }
 
-// Staging area for pending import
 let _pendingImport = null;
 
 function readImportFile(file) {
@@ -2019,9 +2070,7 @@ function readImportFile(file) {
     }
 
     const required = ['id','name','text','backgroundUrl','fontSize',
-                      'textColor','shadowColor','positionX','positionY',
-                      'textAlign','ratio'];
-
+                      'textColor','shadowColor','positionX','positionY','textAlign','ratio'];
     const valid   = parsed.favorites.filter(f => required.every(k => k in f));
     const skipped = parsed.favorites.length - valid.length;
 
@@ -2030,12 +2079,9 @@ function readImportFile(file) {
     }
 
     _pendingImport = { valid, skipped };
-
-    const summary = skipped > 0
-      ? `${valid.length} favorito(s) válidos, ${skipped} omitido(s)`
+    document.getElementById('importSummary').textContent = skipped > 0
+      ? `${valid.length} válido(s), ${skipped} omitido(s)`
       : `${valid.length} favorito(s) para importar`;
-
-    document.getElementById('importSummary').textContent = summary;
     document.getElementById('importModal').hidden = false;
   };
   reader.readAsText(file);
@@ -2059,49 +2105,43 @@ function confirmImport(mode) {
     const existingIds = new Set(favorites.map(f => f.id));
     const toAdd = valid.filter(f => !existingIds.has(f.id));
     favorites.push(...toAdd);
-    const actualAdded = toAdd.length;
-    const dupesSkipped = valid.length - toAdd.length + skipped;
-    const msg = dupesSkipped > 0
-      ? `${actualAdded} importado(s), ${dupesSkipped} omitido(s)`
-      : `${actualAdded} favorito(s) importado(s)`;
+    const dupesSkipped = (valid.length - toAdd.length) + skipped;
     persistFavorites();
+    _favPrev.count = -1;
     renderFavoritesList();
-    toast(msg);
+    toast(dupesSkipped > 0
+      ? `${toAdd.length} importado(s), ${dupesSkipped} omitido(s)`
+      : `${toAdd.length} favorito(s) importado(s)`);
     return;
   }
 
+  // replace path
   persistFavorites();
+  _favPrev.count = -1;
   renderFavoritesList();
-  const msg = skipped > 0
+  toast(skipped > 0
     ? `${valid.length} importado(s), ${skipped} omitido(s)`
-    : `${valid.length} favorito(s) importado(s)`;
-  toast(msg);
+    : `${valid.length} favorito(s) importado(s)`);
 }
-
-// Escape closes import modal
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.getElementById('importModal').hidden) {
-    cancelImport();
-  }
-});
 ```
 
 - [ ] **Step 12.2: Verificar export/import en browser**
 
 Recargar. Verificar:
-- Guardar 2-3 favoritos, exportar → se descarga `pineapple-favorites.json`
+- Guardar 2-3 favoritos → Exportar → descarga `pineapple-favorites.json`
 - Abrir el JSON: estructura `{ "version": 2, "favorites": [...] }`
-- Importar el mismo JSON → modal aparece con el resumen
-- Cerrar overlay o Escape → modal desaparece sin importar
-- Combinar → favoritos se añaden (duplicados ignorados)
-- Reemplazar → lista se sustituye por la importada
+- Importar el mismo archivo → modal con resumen
+- Cerrar overlay, Escape o Cancelar → modal desaparece sin importar nada
+- Combinar → favoritos añadidos, duplicados ignorados
+- Reemplazar → lista sustituida completamente
 - Importar JSON malformado → toast "Archivo no válido"
+- Importar JSON válido sin campo `favorites` → toast "Formato no reconocido"
 
 - [ ] **Step 12.3: Commit**
 
 ```bash
 git add app.js
-git commit -m "feat: add favorites export/import with merge/replace and validation"
+git commit -m "feat: add favorites export/import (versioned JSON, merge/replace, dedup)"
 ```
 
 ---
@@ -2122,25 +2162,26 @@ Append a `app.js`:
 
 function exportPNG() {
   const btn = document.getElementById('btnDownload');
-  btn.disabled = true;
-  _overlay.hidden = false;
+  btn.disabled     = true;
+  _overlay.hidden  = false;
 
   const filename = `pineapple-time-card-${state.ratio.replace(':', '-')}.png`;
 
   html2canvas(_card, {
-    scale: 2,
-    useCORS: true,
+    scale:      2,
+    useCORS:    true,
     allowTaint: false,
+    // downloadOverlay is outside _card (sibling of timeCard inside cardContainer),
+    // so it never appears in the capture. onclone is kept as safety net.
     onclone: cloned => {
-      // Remove overlay from cloned DOM before capture
-      cloned.getElementById('downloadOverlay')?.remove();
+      const ov = cloned.getElementById('downloadOverlay');
+      if (ov) ov.remove();
     },
   }).then(canvas => {
     canvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
-      a.href     = url;
-      a.download = filename;
+      a.href = url; a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     }, 'image/png');
@@ -2148,34 +2189,35 @@ function exportPNG() {
     console.error('Export failed:', err);
     toast('Error al exportar', { type: 'error' });
   }).finally(() => {
-    btn.disabled  = false;
+    btn.disabled    = false;
     _overlay.hidden = true;
   });
 }
 ```
 
-- [ ] **Step 13.2: Verificar export en browser (desde servidor local)**
+- [ ] **Step 13.2: Verificar export desde servidor local**
 
-Nota: para que los fondos predefinidos se exporten correctamente, hay que servir desde un servidor local o GitHub Pages. Desde `file://` los fondos pueden aparecer en blanco.
+Nota: desde `file://` los fondos predefinidos pueden aparecer en blanco. Servir con un servidor local:
 
-Levantar servidor local:
 ```bash
+# Windows (cualquiera de estas):
+py -m http.server 8080
 python -m http.server 8080
 # Abrir: http://localhost:8080
 ```
 
 Verificar:
 - Click en ↓ → overlay "Generando..." aparece, botón deshabilitado
-- Descarga PNG con nombre `pineapple-time-card-16-9.png`
-- PNG muestra el card completo con fondo y texto, sin UI chrome
-- PNG tiene resolución 2x (ej: card 900px → PNG 1800px ancho)
-- Con fondos custom (base64): export funciona también desde `file://`
+- Descarga `pineapple-time-card-16-9.png`
+- PNG sin UI chrome — solo card con fondo y texto
+- PNG resolución 2x del card (card 900px → PNG ≈1800px ancho)
+- Con fondo custom (base64): export funciona también desde `file://`
 
 - [ ] **Step 13.3: Commit**
 
 ```bash
 git add app.js
-git commit -m "feat: add PNG export (html2canvas, scale:2, toBlob)"
+git commit -m "feat: add PNG export (html2canvas scale:2, toBlob non-blocking)"
 ```
 
 ---
@@ -2183,65 +2225,71 @@ git commit -m "feat: add PNG export (html2canvas, scale:2, toBlob)"
 ## Task 14: Verificación end-to-end + limpieza
 
 **Files:**
-- Modify: `app.js` (pequeños ajustes si los hay)
-- Modify: `CLAUDE.md` (actualizar testing checklist)
+- Modify: `CLAUDE.md` (actualizar testing checklist a v2)
 
 - [ ] **Step 14.1: Ejecutar el testing checklist completo**
 
-Servir desde `python -m http.server 8080`. Abrir `http://localhost:8080`. Verificar cada punto:
+Servir desde `py -m http.server 8080`. Abrir `http://localhost:8080`.
 
 **Init:**
 - [ ] Carga con frase aleatoria en el textarea
-- [ ] Carga con fondo aleatorio activo
-- [ ] Colores se actualizan al resolverse `autoAdjustColors` (puede haber flash inicial)
+- [ ] Carga con fondo aleatorio activo y thumbnail activo visible en strip
+- [ ] Colores se actualizan al resolverse `autoAdjustColors` (flash inicial aceptable)
 - [ ] Recargar varias veces: fondo y frase cambian
 
 **Text & Drag:**
 - [ ] Escribir en textarea → texto se actualiza en card en tiempo real
 - [ ] El cursor del textarea NO salta al final mientras se escribe
-- [ ] Texto multilinea (Enter): se preservan saltos de línea en el card
-- [ ] Arrastrar texto con ratón: no sale del card (clamped)
+- [ ] Texto multilinea (Enter en textarea): se preservan saltos en el card
+- [ ] Arrastrar texto con ratón: no sale del card
+- [ ] No se selecciona texto del documento al arrastrar
 - [ ] Arrastrar con touch (DevTools): la página no scrollea durante el drag
 - [ ] Sliders X/Y mueven el texto
 - [ ] Reset → texto vuelve a 50/50/center
 
 **Fondos:**
 - [ ] Clicar thumbnails: cambia fondo y actualiza colores
-- [ ] Subir imagen custom: aparece como primer thumbnail, se autoselecciona
+- [ ] Thumbnail activo siempre visible tras cambio (scroll automático)
+- [ ] Subir imagen custom: primer thumbnail, se autoselecciona
 - [ ] Subir 5 imágenes: la 6ª elimina la más antigua con toast
-- [ ] ✕ en thumbnail custom: lo elimina correctamente
-- [ ] Recargar: los fondos custom persisten
+- [ ] ✕ en thumbnail custom: elimina correctamente, reindexación correcta
+- [ ] Recargar: fondos custom persisten
 
 **Advanced panel:**
-- [ ] ▼ abre/cierra el panel
+- [ ] ▼ abre/cierra el panel; estado persiste al recargar
 - [ ] Escape cierra el panel
+- [ ] Escape cierra el import modal si está abierto (panel no se cierra)
 - [ ] Ctrl+S abre el panel y foca el nombre de favorito
-- [ ] Botón Colores aleatorios cambia colores coherentes con el fondo
+- [ ] Colores aleatorios: coherentes con el fondo (paleta curada)
 - [ ] +/− font size: sin float drift (siempre un decimal)
 - [ ] Align L/C/R: visible en texto de múltiples líneas
 - [ ] 16:9 ↔ 4:3 toggle: cambia el aspect ratio
 
 **Favoritos:**
-- [ ] Guardar sin nombre: mensaje "Escribe un nombre"
+- [ ] Guardar sin nombre: mensaje "Escribe un nombre" + borde rojo en input
 - [ ] Guardar con nombre: aparece arriba de la lista
 - [ ] Cargar: restaura todo el state incluyendo fondo
-- [ ] Eliminar: toast con Deshacer 5s; Deshacer lo restaura en su posición
-- [ ] Exportar: JSON descargado con `{ "version": 2, "favorites": [...] }`
+- [ ] Eliminar: toast con Deshacer 5s; Deshacer restaura en posición original
+- [ ] Exportar: JSON con `{ "version": 2, "favorites": [...] }`
 - [ ] Importar y combinar: no crea duplicados
-- [ ] Importar y reemplazar: sustituye la lista
-- [ ] Cancelar import modal (overlay, Escape, botón): no importa nada
+- [ ] Importar y reemplazar: sustituye la lista completa
+- [ ] Cancelar import (overlay / Escape / botón): no importa nada
 
 **Export PNG:**
-- [ ] Descarga PNG sin UI chrome (sin botones visibles)
-- [ ] PNG tiene resolución ~2x del card
-- [ ] Fondo, texto, colores y posición se exportan correctamente
+- [ ] PNG sin UI chrome
+- [ ] PNG resolución ~2x del card
+- [ ] Fondo, texto, colores y posición exportados correctamente
 
 **Persistencia:**
-- [ ] Recargar: `advancedOpen` se restaura (si estaba abierto, sigue abierto)
+- [ ] Recargar: `advancedOpen` se restaura
 - [ ] Recargar: fondos custom persisten
 - [ ] Recargar: favoritos persisten
 
-- [ ] **Step 14.2: Commit final**
+- [ ] **Step 14.2: Actualizar CLAUDE.md**
+
+En `CLAUDE.md`, reemplazar la sección "Testing Checklist" por el checklist del paso anterior (ya verificado).
+
+- [ ] **Step 14.3: Commit final**
 
 ```bash
 git add app.js CLAUDE.md
@@ -2261,27 +2309,34 @@ git commit -m "feat: v2 complete — state-driven rewrite with all v1 bugs fixed
 | allBackgrounds() | Task 3 |
 | backgroundPresets con label | Task 2 |
 | renderCard (position, textAlign, shadow, font-size) | Task 4 |
+| classList.toggle para ratio (no sobreescribe clases) | Task 4 |
 | renderStrip dirty-check + scroll-into-view | Task 4 |
+| renderFavoritesList dirty-check | Task 4 |
 | renderControls + textarea focus guard | Task 4 |
 | autoAdjustColors + race guard + cache | Task 5 |
 | Paletas curadas DARK/LIGHT | Task 2 |
 | Random Colors button | Task 9 |
-| Init batching | Task 6 |
+| Init batch Object.assign (spec requirement) | Task 6 |
+| Init sin llamada a wireEvents hasta Task 9 | Tasks 6-9 |
 | localStorage try/catch | Task 3 |
 | Persistencia customBgs, advancedOpen, favorites | Task 6 |
 | Mouse drag + user-select | Task 7 |
 | Touch drag passive:false | Task 8 |
-| Drag clamp [5, 95] | Task 7 |
-| Advanced panel + Escape + Ctrl+S | Task 9 |
+| Drag clamp [5, 95] | Tasks 7-8 |
+| Single keydown listener (Escape + Ctrl+S) | Task 9 |
+| Escape: modal tiene prioridad sobre panel | Task 9 |
 | Font size [0.5, 8] step 0.1 + round | Task 9 |
 | overflow-wrap: break-word | Task 1 (style.css) |
+| #favNameInput.error CSS | Task 1 (style.css) |
 | Custom bg upload max-5 eviction | Task 10 |
 | Favorites save/load/delete+undo | Task 11 |
+| _favPrev invalidado en save/delete/import | Tasks 11-12 |
+| loadFavorite: direct mutation documentada como excepción aceptada | Task 11 |
 | Favorites export/import versioned | Task 12 |
-| Import deduplication por id | Task 12 |
+| Import deduplicación por id | Task 12 |
 | Import schema validation | Task 12 |
 | Export PNG toBlob scale:2 | Task 13 |
-| file:// limitation documentada | Task 13 (nota) |
+| file:// limitation + Windows server command | Task 13 |
 | Toasts 3s + undo stack | Task 2 (Utils) |
 | Separador custom/preset en strip | Task 4 |
 | Custom thumbnail aria-label | Task 4 |
