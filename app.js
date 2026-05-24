@@ -192,3 +192,197 @@ function loadFromLS(key, fallback) {
     return fallback;
   }
 }
+
+// =============================================================
+// --- Render ---
+// =============================================================
+
+// DOM refs — populated in init() after DOMContentLoaded
+let _card, _strip, _overlay, _textarea;
+
+function renderCard() {
+  const bgs = allBackgrounds();
+  const bg  = bgs[state.backgroundIndex] || bgs[0];
+
+  _card.style.backgroundImage = `url('${bg.url}')`;
+  // Use classList.toggle to avoid clobbering other potential classes
+  _card.classList.toggle('ratio-4-3', state.ratio === '4:3');
+
+  // Text wrapper — update in place, never replace the element
+  let wrapper = _card.querySelector('.text-wrapper');
+  if (!wrapper) {
+    wrapper = document.createElement('div');
+    wrapper.className = 'text-wrapper';
+    _card.appendChild(wrapper);
+  }
+
+  wrapper.textContent = state.text || '';
+  wrapper.style.left      = `${state.positionX}%`;
+  wrapper.style.top       = `${state.positionY}%`;
+  wrapper.style.fontSize  = `${state.fontSize}em`;
+  wrapper.style.textAlign = state.textAlign;
+
+  _card.style.color      = state.textColor;
+  _card.style.textShadow =
+    `2px 2px 0 ${state.shadowColor}, -2px -2px 0 ${state.shadowColor}`;
+}
+
+// Strip dirty-check — avoids rebuilding on text/color/position changes
+const _stripPrev = { customLength: -1, backgroundIndex: -1 };
+
+function renderStrip() {
+  const changed =
+    state.customBackgrounds.length !== _stripPrev.customLength ||
+    state.backgroundIndex          !== _stripPrev.backgroundIndex;
+
+  if (!changed) return;
+
+  _stripPrev.customLength    = state.customBackgrounds.length;
+  _stripPrev.backgroundIndex = state.backgroundIndex;
+
+  const bgs       = allBackgrounds();
+  const uploadBtn = document.getElementById('btnBgUpload');
+
+  // Remove existing thumbnails and separators; keep the upload button
+  _strip.querySelectorAll('.thumbnail-wrapper, .strip-separator').forEach(el => el.remove());
+
+  const hasCustom = state.customBackgrounds.length > 0;
+
+  bgs.forEach((bg, i) => {
+    // Separator between custom and preset sections
+    if (hasCustom && i === state.customBackgrounds.length) {
+      const sep = document.createElement('div');
+      sep.className = 'strip-separator';
+      _strip.insertBefore(sep, uploadBtn);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'thumbnail-wrapper';
+
+    const thumb = document.createElement('div');
+    thumb.className = 'thumbnail' + (i === state.backgroundIndex ? ' active' : '');
+    thumb.style.backgroundImage = `url('${bg.url}')`;
+    thumb.setAttribute('aria-label', bg.label);
+    thumb.setAttribute('title', bg.label);
+    thumb.dataset.index = i;
+    wrapper.appendChild(thumb);
+
+    if (bg.isCustom) {
+      const rmBtn = document.createElement('button');
+      rmBtn.className = 'btn-remove-bg';
+      rmBtn.textContent = '✕';
+      rmBtn.setAttribute('aria-label', `Eliminar ${bg.label}`);
+      rmBtn.dataset.index = i;
+      wrapper.appendChild(rmBtn);
+    }
+
+    _strip.insertBefore(wrapper, uploadBtn);
+  });
+
+  // Scroll active thumbnail into view after rebuild
+  const activeThumb = _strip.querySelector('.thumbnail.active');
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+// Favorites list dirty-check — avoids rebuilding on every keypress
+const _favPrev = { count: -1, ids: '' };
+
+function renderFavoritesList() {
+  const list = document.getElementById('favoritesList');
+  if (!list) return;
+
+  // Cheap dirty-check: compare count + concatenated ids
+  const currentIds = favorites.map(f => f.id).join(',');
+  if (favorites.length === _favPrev.count && currentIds === _favPrev.ids) return;
+  _favPrev.count = favorites.length;
+  _favPrev.ids   = currentIds;
+
+  list.innerHTML = '';
+
+  if (favorites.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'fav-empty';
+    empty.textContent = 'No hay favoritos guardados.';
+    list.appendChild(empty);
+    return;
+  }
+
+  // Newest first
+  [...favorites].reverse().forEach(fav => {
+    const item = document.createElement('div');
+    item.className = 'fav-item';
+
+    const name = document.createElement('span');
+    name.className = 'fav-name';
+    name.textContent = fav.name;
+    name.setAttribute('title', fav.name);
+
+    const actions = document.createElement('div');
+    actions.className = 'fav-actions';
+
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'btn-load-fav';
+    loadBtn.textContent = 'Cargar';
+    loadBtn.dataset.id = fav.id;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-delete-fav';
+    delBtn.textContent = '✕';
+    delBtn.dataset.id = fav.id;
+
+    actions.appendChild(loadBtn);
+    actions.appendChild(delBtn);
+    item.appendChild(name);
+    item.appendChild(actions);
+    list.appendChild(item);
+  });
+}
+
+function renderControls() {
+  // Font size
+  const slider  = document.getElementById('sliderFontSize');
+  const display = document.getElementById('fontSizeDisplay');
+  if (slider)  slider.value = state.fontSize;
+  if (display) display.textContent = `${state.fontSize.toFixed(1)}em`;
+
+  // Position sliders
+  const sliderX = document.getElementById('sliderX');
+  const sliderY = document.getElementById('sliderY');
+  if (sliderX) sliderX.value = state.positionX;
+  if (sliderY) sliderY.value = state.positionY;
+
+  // Align buttons
+  document.querySelectorAll('.btn-align').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.align === state.textAlign);
+  });
+
+  // Color pickers
+  const colorText   = document.getElementById('colorText');
+  const colorShadow = document.getElementById('colorShadow');
+  if (colorText)   colorText.value   = state.textColor;
+  if (colorShadow) colorShadow.value = state.shadowColor;
+
+  // Ratio button label
+  const btnRatio = document.getElementById('btnRatio');
+  if (btnRatio) btnRatio.textContent =
+    state.ratio === '16:9' ? '16:9 → 4:3' : '4:3 → 16:9';
+
+  // Advanced panel visibility
+  const panel = document.getElementById('advancedPanel');
+  if (panel) panel.hidden = !state.advancedOpen;
+
+  // Textarea — skip if focused to prevent cursor jump while typing
+  if (_textarea && document.activeElement !== _textarea) {
+    _textarea.value = state.text;
+  }
+
+  renderFavoritesList();
+}
+
+function render() {
+  renderCard();
+  renderStrip();
+  renderControls();
+}
