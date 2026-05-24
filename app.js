@@ -444,3 +444,60 @@ function randomColorsForCurrentBg() {
   const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
   setState({ textColor, shadowColor });
 }
+
+// =============================================================
+// --- Init ---
+// =============================================================
+
+function init() {
+  // DOM refs
+  _card     = document.getElementById('timeCard');
+  _strip    = document.getElementById('bgStrip');
+  _overlay  = document.getElementById('downloadOverlay');
+  _textarea = document.getElementById('textInput');
+
+  // Load all persisted data (each read is individually try/catch via loadFromLS)
+  const savedUI     = loadFromLS(LS_UI, {});
+  const savedCustom = loadFromLS(LS_CUSTOM_BGS, []);
+  favorites         = loadFromLS(LS_FAVORITES, []);
+
+  // Compute all init values upfront
+  const customBackgrounds = Array.isArray(savedCustom) ? savedCustom : [];
+  const advancedOpen      = savedUI.advancedOpen ?? false;
+  const text              = _randomPhrase('');
+  const totalBgs          = customBackgrounds.length + backgroundPresets.length;
+  const backgroundIndex   = Math.floor(Math.random() * totalBgs);
+
+  // Single batch mutation — one render() at the end (spec requirement)
+  Object.assign(state, { customBackgrounds, advancedOpen, text, backgroundIndex });
+  render();
+
+  // Async color update — fires setState when image brightness resolves
+  const currentBg = allBackgrounds()[state.backgroundIndex];
+  if (currentBg) autoAdjustColors(currentBg.url);
+
+  // wireEvents() — added in Task 9
+}
+
+function _randomPhrase(current) {
+  const pool = phrases.filter(p => p !== current);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+// --- Persistence helpers ---
+// Call these explicitly after mutations that need to be saved.
+// NOT called automatically in setState — only persists what changed.
+
+function persistUI() {
+  saveToLS(LS_UI, { advancedOpen: state.advancedOpen });
+}
+
+function persistCustomBgs() {
+  saveToLS(LS_CUSTOM_BGS, state.customBackgrounds);
+}
+
+function persistFavorites() {
+  saveToLS(LS_FAVORITES, favorites);
+}
