@@ -114,7 +114,7 @@ function _buildToast(message, cssClass, undoCallback) {
   if (undoCallback) {
     const btn = document.createElement('button');
     btn.className = 'toast-undo-btn';
-    btn.textContent = 'Deshacer';
+    btn.textContent = 'Undo';
     btn.addEventListener('click', () => { undoCallback(); t.remove(); });
     t.appendChild(btn);
   }
@@ -165,7 +165,7 @@ function allBackgrounds() {
     ...state.customBackgrounds.map((url, i) => ({
       url,
       isCustom: true,
-      label: `Fondo personalizado ${i + 1}`,
+      label: `Custom background ${i + 1}`,
     })),
     ...backgroundPresets,
   ];
@@ -178,7 +178,7 @@ function saveToLS(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
     if (e.name === 'QuotaExceededError') {
-      toast('Error: almacenamiento lleno', { type: 'error' });
+      toast('Storage full', { type: 'error' });
     }
   }
 }
@@ -271,7 +271,7 @@ function renderStrip() {
       const rmBtn = document.createElement('button');
       rmBtn.className = 'btn-remove-bg';
       rmBtn.textContent = '✕';
-      rmBtn.setAttribute('aria-label', `Eliminar ${bg.label}`);
+      rmBtn.setAttribute('aria-label', `Remove ${bg.label}`);
       rmBtn.dataset.index = i;
       wrapper.appendChild(rmBtn);
     }
@@ -304,7 +304,7 @@ function renderFavoritesList() {
   if (favorites.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'fav-empty';
-    empty.textContent = 'No hay favoritos guardados.';
+    empty.textContent = 'No favorites saved.';
     list.appendChild(empty);
     return;
   }
@@ -714,7 +714,7 @@ function uploadCustomBg(file) {
     // updated backgroundIndex so render() gets the correct final state.
     if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
       state.customBackgrounds.pop(); // evict oldest
-      toast('Fondo más antiguo eliminado para hacer espacio');
+      toast('Oldest background removed to make room');
     }
 
     state.customBackgrounds.unshift(dataUrl); // new upload at index 0
@@ -789,7 +789,7 @@ function saveFavorite() {
   // Invalidate dirty-check so list rebuilds
   _favPrev.count = -1;
   renderFavoritesList();
-  toast(`"${name}" guardado`);
+  toast(`"${name}" saved`);
 }
 
 function loadFavorite(id) {
@@ -810,7 +810,7 @@ function loadFavorite(id) {
     if (customIdx === -1) {
       if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
         state.customBackgrounds.pop();
-        toast('Fondo más antiguo eliminado para hacer espacio');
+        toast('Oldest background removed to make room');
       }
       state.customBackgrounds.unshift(fav.backgroundUrl);
       persistCustomBgs();
@@ -844,7 +844,7 @@ function deleteFavorite(id) {
   renderFavoritesList();
 
   let undone = false;
-  toast(`"${removed.name}" eliminado`, {
+  toast(`"${removed.name}" deleted`, {
     type: 'undo',
     undoCallback: () => {
       if (undone) return;
@@ -878,10 +878,10 @@ function readImportFile(file) {
   reader.onload = e => {
     let parsed;
     try { parsed = JSON.parse(e.target.result); }
-    catch (_) { toast('Archivo no válido', { type: 'error' }); return; }
+    catch (_) { toast('Invalid file', { type: 'error' }); return; }
 
     if (!parsed || !Array.isArray(parsed.favorites)) {
-      toast('Formato no reconocido', { type: 'error' }); return;
+      toast('Unrecognized format', { type: 'error' }); return;
     }
 
     const required = ['id','name','text','backgroundUrl','fontSize',
@@ -890,13 +890,13 @@ function readImportFile(file) {
     const skipped = parsed.favorites.length - valid.length;
 
     if (valid.length === 0) {
-      toast('No se encontraron favoritos válidos', { type: 'error' }); return;
+      toast('No valid favorites found', { type: 'error' }); return;
     }
 
     _pendingImport = { valid, skipped };
     document.getElementById('importSummary').textContent = skipped > 0
-      ? `${valid.length} válido(s), ${skipped} omitido(s)`
-      : `${valid.length} favorito(s) para importar`;
+      ? `${valid.length} valid, ${skipped} skipped`
+      : `${valid.length} favorite(s) to import`;
     document.getElementById('importModal').hidden = false;
   };
   reader.readAsText(file);
@@ -925,8 +925,8 @@ function confirmImport(mode) {
     _favPrev.count = -1;
     renderFavoritesList();
     toast(dupesSkipped > 0
-      ? `${toAdd.length} importado(s), ${dupesSkipped} omitido(s)`
-      : `${toAdd.length} favorito(s) importado(s)`);
+      ? `${toAdd.length} imported, ${dupesSkipped} skipped`
+      : `${toAdd.length} favorite(s) imported`);
     return;
   }
 
@@ -935,8 +935,8 @@ function confirmImport(mode) {
   _favPrev.count = -1;
   renderFavoritesList();
   toast(skipped > 0
-    ? `${valid.length} importado(s), ${skipped} omitido(s)`
-    : `${valid.length} favorito(s) importado(s)`);
+    ? `${valid.length} imported, ${skipped} skipped`
+    : `${valid.length} favorite(s) imported`);
 }
 
 // =============================================================
@@ -970,7 +970,7 @@ function exportPNG() {
     }, 'image/png');
   }).catch(err => {
     console.error('Export failed:', err);
-    toast('Error al exportar', { type: 'error' });
+    toast('Export error', { type: 'error' });
   }).finally(() => {
     btn.disabled    = false;
     _overlay.hidden = true;
