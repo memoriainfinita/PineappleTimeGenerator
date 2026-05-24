@@ -711,3 +711,55 @@ function wireEvents() {
   document.getElementById('btnImportMerge').addEventListener('click',   () => confirmImport('merge'));
   document.getElementById('btnImportReplace').addEventListener('click', () => confirmImport('replace'));
 }
+
+// =============================================================
+// --- Custom Backgrounds ---
+// =============================================================
+
+function uploadCustomBg(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+
+    // Direct mutation of state.customBackgrounds is an accepted exception here
+    // (same as in loadFavorite) — setState is called immediately after with the
+    // updated backgroundIndex so render() gets the correct final state.
+    if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
+      state.customBackgrounds.pop(); // evict oldest
+      toast('Fondo más antiguo eliminado para hacer espacio');
+    }
+
+    state.customBackgrounds.unshift(dataUrl); // new upload at index 0
+    persistCustomBgs();
+    setState({ backgroundIndex: 0 });         // auto-select new upload
+    autoAdjustColors(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCustomBg(index) {
+  // index is position in allBackgrounds() == position in customBackgrounds[]
+  // (custom bgs are always at the start of allBackgrounds)
+  const wasActive = index === state.backgroundIndex;
+
+  state.customBackgrounds.splice(index, 1);
+  persistCustomBgs();
+
+  // Recalculate backgroundIndex
+  let newIndex = state.backgroundIndex;
+  if (wasActive) {
+    // Select next available; clamp to valid range
+    newIndex = Math.min(index, allBackgrounds().length - 1);
+    if (newIndex < 0) newIndex = 0;
+  } else if (index < state.backgroundIndex) {
+    // Removed item was before active — shift index down by 1
+    newIndex = state.backgroundIndex - 1;
+  }
+
+  setState({ backgroundIndex: newIndex });
+
+  if (wasActive) {
+    const newBg = allBackgrounds()[newIndex];
+    if (newBg) autoAdjustColors(newBg.url);
+  }
+}
