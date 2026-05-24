@@ -952,7 +952,7 @@ function exportPNG() {
 
   html2canvas(_card, {
     scale:      2,
-    useCORS:    true,
+    useCORS:    false,
     allowTaint: true,
     // downloadOverlay is outside _card (sibling of timeCard inside cardContainer),
     // so it never appears in the capture. onclone is kept as safety net.
@@ -970,10 +970,7 @@ function exportPNG() {
     }, 'image/png');
   }).catch(err => {
     console.error('Export failed:', err);
-    const msg = (err instanceof DOMException && err.name === 'SecurityError')
-      ? 'Export blocked — open from GitHub Pages or a local server'
-      : 'Export error';
-    toast(msg, { type: 'error' });
+    toast('Export error', { type: 'error' });
   }).finally(() => {
     btn.disabled    = false;
     _overlay.hidden = true;
