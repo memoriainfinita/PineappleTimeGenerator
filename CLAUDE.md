@@ -25,6 +25,11 @@ Open `index.html` in Chrome directly.
 - [ ] Colors update when `autoAdjustColors` resolves (initial flash acceptable)
 - [ ] Reload several times: background and phrase change
 
+**Text row:**
+- [ ] Phrase ↺ picks a random phrase, different from current
+- [ ] Colors ↺ updates text/shadow colors coherently with background (curated palette)
+- [ ] Download ↓ exports PNG (see Export PNG section)
+
 **Text & Drag:**
 - [ ] Typing in textarea → text updates in card in real time
 - [ ] Textarea cursor does NOT jump to end while typing
@@ -32,7 +37,6 @@ Open `index.html` in Chrome directly.
 - [ ] Mouse drag: text stays within card bounds
 - [ ] No text selection in document during drag
 - [ ] Touch drag (DevTools): page does NOT scroll during drag on card
-- [ ] X/Y sliders move text
 - [ ] Reset → text returns to 50/50/center
 
 **Backgrounds:**
@@ -44,17 +48,16 @@ Open `index.html` in Chrome directly.
 - [ ] Reload: custom backgrounds persist
 
 **Advanced panel:**
-- [ ] ▼ opens/closes panel; state persists on reload
+- [ ] ▼ Customize opens/closes panel; state persists on reload
 - [ ] Escape closes panel
 - [ ] Escape closes import modal if open (panel stays)
 - [ ] Ctrl+S opens panel and focuses favorite name input
-- [ ] Random colors: coherent with background (curated palette)
 - [ ] +/− font size: no float drift (always one decimal)
 - [ ] Align L/C/R: visible on multiline text
 - [ ] 16:9 ↔ 4:3 toggle: changes aspect ratio
 
 **Favorites:**
-- [ ] Save without name: "Escribe un nombre" + red border on input
+- [ ] Save without name: "Enter a name" + red border on input
 - [ ] Save with name: appears at top of list
 - [ ] Load: restores full state including background
 - [ ] Delete: toast with Undo 5s; Undo restores at original position
