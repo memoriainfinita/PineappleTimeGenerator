@@ -121,3 +121,74 @@ function _buildToast(message, cssClass, undoCallback) {
 
   return t;
 }
+
+// =============================================================
+// --- State ---
+// =============================================================
+
+const LS_FAVORITES   = 'pineapple_v2_favorites';
+const LS_CUSTOM_BGS  = 'pineapple_v2_custom_bgs';
+const LS_UI          = 'pineapple_v2_ui';
+const MAX_CUSTOM_BGS = 5;
+
+const state = {
+  text:              '',
+  backgroundIndex:   0,
+  customBackgrounds: [],   // base64 URLs; max MAX_CUSTOM_BGS
+  fontSize:          3,    // em; range [0.5, 8]
+  textColor:         '#3e1600',
+  shadowColor:       '#ffeb99',
+  positionX:         50,   // [5, 95]
+  positionY:         50,   // [5, 95]
+  textAlign:         'center',
+  ratio:             '16:9',
+  advancedOpen:      false,
+};
+
+// Favorites are NOT in state — managed separately to avoid
+// rebuilding the favorites list on every keystroke.
+let favorites = [];
+
+// --- setState ---
+// Rule: ALL event handlers and async callbacks mutate state through setState().
+// Exception: init() mutates state directly and calls render() once.
+
+function setState(patch) {
+  Object.assign(state, patch);
+  render();
+}
+
+// --- allBackgrounds ---
+
+function allBackgrounds() {
+  return [
+    ...state.customBackgrounds.map((url, i) => ({
+      url,
+      isCustom: true,
+      label: `Fondo personalizado ${i + 1}`,
+    })),
+    ...backgroundPresets,
+  ];
+}
+
+// --- localStorage helpers ---
+
+function saveToLS(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      toast('Error: almacenamiento lleno', { type: 'error' });
+    }
+  }
+}
+
+function loadFromLS(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch (_) {
+    return fallback;
+  }
+}
