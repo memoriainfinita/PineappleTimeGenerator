@@ -386,3 +386,61 @@ function render() {
   renderStrip();
   renderControls();
 }
+
+// =============================================================
+// --- Color System ---
+// =============================================================
+
+const _brightnessCache = new Map(); // url -> brightness
+
+async function _getImageBrightness(url) {
+  if (_brightnessCache.has(url)) return _brightnessCache.get(url);
+
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = 100;
+        canvas.height = 100;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 100, 100);
+        const data = ctx.getImageData(0, 0, 100, 100).data;
+        let total = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          total += 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+        }
+        const brightness = total / (100 * 100);
+        _brightnessCache.set(url, brightness);
+        resolve(brightness);
+      } catch (_) {
+        _brightnessCache.set(url, 128); // CORS/taint fallback
+        resolve(128);
+      }
+    };
+    img.onerror = () => { _brightnessCache.set(url, 128); resolve(128); };
+    img.src = url;
+  });
+}
+
+async function autoAdjustColors(url) {
+  const brightness = await _getImageBrightness(url);
+
+  // Race condition guard: discard if user changed background while loading
+  const currentBg = allBackgrounds()[state.backgroundIndex];
+  if (!currentBg || currentBg.url !== url) return;
+
+  const textColor   = brightness < 128 ? generateLightColor() : generateDarkColor();
+  const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
+  setState({ textColor, shadowColor });
+}
+
+function randomColorsForCurrentBg() {
+  const currentBg = allBackgrounds()[state.backgroundIndex];
+  if (!currentBg) return;
+  const brightness = _brightnessCache.get(currentBg.url) ?? 128;
+  const textColor   = brightness < 128 ? generateLightColor() : generateDarkColor();
+  const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
+  setState({ textColor, shadowColor });
+}
