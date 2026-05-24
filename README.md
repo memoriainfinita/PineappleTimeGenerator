@@ -17,37 +17,29 @@ Open `index.html` in a browser. No dependencies to install. Works offline (excep
 
 ## Features
 
-- **Text:** write your own or pick from 35+ iconic phrases; loads a random one on start
+- **Text:** write your own or pick from 35+ iconic phrases with `Phrase ↺`; loads a random one on start
 - **Backgrounds:** 15 SpongeBob episode backgrounds + custom image upload; loads a random one on start
-- **Smart colors:** auto-contrast analyzes background brightness and picks readable text/shadow colors
-- **Style:** font size (+/- buttons or slider), text color, shadow color
-- **Positioning:** drag text directly on the card, or use X/Y sliders and alignment buttons
+- **Smart colors:** `Colors ↺` analyzes background brightness and picks readable text/shadow colors
+- **Style:** font size (+/− buttons or slider), text color, shadow color
+- **Positioning:** drag text directly on the card; alignment buttons (L/C/R) and reset
 - **Aspect ratio:** toggle between 16:9 and 4:3
 - **Favorites:** save, load, delete presets; export/import as JSON
-- **Export:** clean PNG (no borders or UI chrome)
+- **Export:** clean PNG at 2× resolution (no UI chrome)
 
 ## How to Use
 
-1. Write your text or pick a phrase from the dropdown
-2. Choose a background from the grid or upload your own
-3. Hit "Random Colors" to auto-set readable colors, or adjust manually
-4. Drag the text on screen or use the sliders to reposition
-5. Save as a favorite if you want to come back to this setup
-6. Click "Download" to export as PNG
+1. Write your text or click `Phrase ↺` for a random one
+2. Choose a background from the strip or upload your own
+3. Click `Colors ↺` to auto-set readable colors, or adjust manually
+4. Drag the text on the card to reposition it
+5. Save as a favorite if you want to reuse this setup
+6. Click `Download ↓` to export as PNG
 
-**Keyboard shortcut:** `Ctrl+S` focuses the favorites name field.
+**Keyboard shortcut:** `Ctrl+S` opens the panel and focuses the favorites name field.
 
 ## Special Dedication
 
 This project is dedicated to **[CuriousMarc](https://www.youtube.com/c/Curiousmarc)** — a YouTube channel I've been watching for years. They use SpongeBob time cards throughout their videos on vintage computing and electronics restoration. *Merci beaucoup* to Marc and his team.
-
-## Planned Improvements
-
-- Custom font options
-- Additional export formats (JPG, GIF, video)
-- Animation effects
-- Templates library
-- Batch processing
 
 ## Technologies
 
@@ -56,7 +48,7 @@ This project is dedicated to **[CuriousMarc](https://www.youtube.com/c/Curiousma
 
 ## Development
 
-Built with vibe coding and Claude AI assistance. Single-file approach — everything in `index.html`, no build step.
+Built with vibe coding and Claude AI assistance. Three files (`index.html`, `style.css`, `app.js`), no build step.
 
 ## License
 
