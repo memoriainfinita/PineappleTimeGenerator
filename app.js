@@ -476,11 +476,7 @@ function init() {
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (currentBg) autoAdjustColors(currentBg.url);
 
-  // Drag (temporary — moved inside wireEvents() in Task 9)
-  initMouseDrag();
-  initTouchDrag();
-
-  // wireEvents() — added in Task 9
+  wireEvents();
 }
 
 function _randomPhrase(current) {
@@ -569,4 +565,149 @@ function initTouchDrag() {
       positionY: clamp(state.positionY + dy, 5, 95),
     });
   }, { passive: false }); // passive:false required for preventDefault
+}
+
+// =============================================================
+// --- Events ---
+// =============================================================
+
+function wireEvents() {
+  // Drag (replaces temporary calls in init)
+  initMouseDrag();
+  initTouchDrag();
+
+  // --- Text row ---
+  _textarea.addEventListener('input', () => {
+    setState({ text: _textarea.value });
+  });
+
+  document.getElementById('btnRandom').addEventListener('click', () => {
+    setState({ text: _randomPhrase(state.text) });
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', exportPNG);
+
+  // --- Background strip (event delegation) ---
+  _strip.addEventListener('click', e => {
+    const thumb = e.target.closest('.thumbnail');
+    if (thumb) {
+      const idx = parseInt(thumb.dataset.index, 10);
+      setState({ backgroundIndex: idx });
+      const bg = allBackgrounds()[idx];
+      if (bg) autoAdjustColors(bg.url);
+      return;
+    }
+    const rmBtn = e.target.closest('.btn-remove-bg');
+    if (rmBtn) {
+      removeCustomBg(parseInt(rmBtn.dataset.index, 10));
+      return;
+    }
+    if (e.target.closest('#btnBgUpload')) {
+      document.getElementById('bgUploadInput').click();
+    }
+  });
+
+  document.getElementById('bgUploadInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) uploadCustomBg(file);
+    e.target.value = '';
+  });
+
+  // --- Advanced panel toggle ---
+  document.getElementById('btnToggleAdvanced').addEventListener('click', () => {
+    setState({ advancedOpen: !state.advancedOpen });
+    persistUI();
+  });
+
+  // Keyboard: Escape + Ctrl+S
+  // Single listener handles both — avoids duplicate listener bugs.
+  document.addEventListener('keydown', e => {
+    const modalOpen = !document.getElementById('importModal').hidden;
+
+    if (e.key === 'Escape') {
+      if (modalOpen) {
+        cancelImport();  // modal takes priority
+      } else if (state.advancedOpen) {
+        setState({ advancedOpen: false });
+        persistUI();
+      }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      if (!state.advancedOpen) {
+        setState({ advancedOpen: true });
+        persistUI();
+      }
+      document.getElementById('favoritesSection')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setTimeout(() => document.getElementById('favNameInput')?.focus(), 150);
+    }
+  });
+
+  // --- Colors ---
+  document.getElementById('colorText').addEventListener('input', e => {
+    setState({ textColor: e.target.value });
+  });
+  document.getElementById('colorShadow').addEventListener('input', e => {
+    setState({ shadowColor: e.target.value });
+  });
+  document.getElementById('btnRandomColors').addEventListener('click', randomColorsForCurrentBg);
+
+  // --- Font size ---
+  document.getElementById('sliderFontSize').addEventListener('input', e => {
+    setState({ fontSize: roundOneDecimal(parseFloat(e.target.value)) });
+  });
+  document.getElementById('btnFontMinus').addEventListener('click', () => {
+    setState({ fontSize: roundOneDecimal(clamp(state.fontSize - 0.1, 0.5, 8)) });
+  });
+  document.getElementById('btnFontPlus').addEventListener('click', () => {
+    setState({ fontSize: roundOneDecimal(clamp(state.fontSize + 0.1, 0.5, 8)) });
+  });
+
+  // --- Position ---
+  document.getElementById('sliderX').addEventListener('input', e => {
+    setState({ positionX: parseInt(e.target.value, 10) });
+  });
+  document.getElementById('sliderY').addEventListener('input', e => {
+    setState({ positionY: parseInt(e.target.value, 10) });
+  });
+  document.querySelectorAll('.btn-align').forEach(btn => {
+    btn.addEventListener('click', () => setState({ textAlign: btn.dataset.align }));
+  });
+  document.getElementById('btnResetPosition').addEventListener('click', () => {
+    setState({ positionX: 50, positionY: 50, textAlign: 'center' });
+  });
+
+  // --- Ratio ---
+  document.getElementById('btnRatio').addEventListener('click', () => {
+    setState({ ratio: state.ratio === '16:9' ? '4:3' : '16:9' });
+  });
+
+  // --- Favorites ---
+  document.getElementById('btnSaveFavorite').addEventListener('click', saveFavorite);
+
+  document.getElementById('favoritesList').addEventListener('click', e => {
+    const loadBtn = e.target.closest('.btn-load-fav');
+    if (loadBtn) { loadFavorite(parseInt(loadBtn.dataset.id, 10)); return; }
+    const delBtn = e.target.closest('.btn-delete-fav');
+    if (delBtn)  { deleteFavorite(parseInt(delBtn.dataset.id, 10)); }
+  });
+
+  document.getElementById('btnExportFavorites').addEventListener('click', exportFavorites);
+  document.getElementById('btnImportFavorites').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+  document.getElementById('importFileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) readImportFile(file);
+    e.target.value = '';
+  });
+
+  // Import modal buttons
+  document.getElementById('importOverlay').addEventListener('click',    cancelImport);
+  document.getElementById('btnImportCancel').addEventListener('click',  cancelImport);
+  document.getElementById('btnImportMerge').addEventListener('click',   () => confirmImport('merge'));
+  document.getElementById('btnImportReplace').addEventListener('click', () => confirmImport('replace'));
 }
