@@ -868,3 +868,85 @@ function deleteFavorite(id) {
     },
   });
 }
+
+// =============================================================
+// --- Favorites Export / Import ---
+// =============================================================
+
+function exportFavorites() {
+  const data = { version: 2, favorites };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'pineapple-favorites.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+let _pendingImport = null;
+
+function readImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    let parsed;
+    try { parsed = JSON.parse(e.target.result); }
+    catch (_) { toast('Archivo no válido', { type: 'error' }); return; }
+
+    if (!parsed || !Array.isArray(parsed.favorites)) {
+      toast('Formato no reconocido', { type: 'error' }); return;
+    }
+
+    const required = ['id','name','text','backgroundUrl','fontSize',
+                      'textColor','shadowColor','positionX','positionY','textAlign','ratio'];
+    const valid   = parsed.favorites.filter(f => required.every(k => k in f));
+    const skipped = parsed.favorites.length - valid.length;
+
+    if (valid.length === 0) {
+      toast('No se encontraron favoritos válidos', { type: 'error' }); return;
+    }
+
+    _pendingImport = { valid, skipped };
+    document.getElementById('importSummary').textContent = skipped > 0
+      ? `${valid.length} válido(s), ${skipped} omitido(s)`
+      : `${valid.length} favorito(s) para importar`;
+    document.getElementById('importModal').hidden = false;
+  };
+  reader.readAsText(file);
+}
+
+function cancelImport() {
+  _pendingImport = null;
+  document.getElementById('importModal').hidden = true;
+}
+
+function confirmImport(mode) {
+  if (!_pendingImport) return;
+  const { valid, skipped } = _pendingImport;
+  _pendingImport = null;
+  document.getElementById('importModal').hidden = true;
+
+  if (mode === 'replace') {
+    favorites = valid;
+  } else {
+    // Merge — deduplicate by id
+    const existingIds = new Set(favorites.map(f => f.id));
+    const toAdd = valid.filter(f => !existingIds.has(f.id));
+    favorites.push(...toAdd);
+    const dupesSkipped = (valid.length - toAdd.length) + skipped;
+    persistFavorites();
+    _favPrev.count = -1;
+    renderFavoritesList();
+    toast(dupesSkipped > 0
+      ? `${toAdd.length} importado(s), ${dupesSkipped} omitido(s)`
+      : `${toAdd.length} favorito(s) importado(s)`);
+    return;
+  }
+
+  // replace path
+  persistFavorites();
+  _favPrev.count = -1;
+  renderFavoritesList();
+  toast(skipped > 0
+    ? `${valid.length} importado(s), ${skipped} omitido(s)`
+    : `${valid.length} favorito(s) importado(s)`);
+}
