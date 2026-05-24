@@ -763,3 +763,108 @@ function removeCustomBg(index) {
     if (newBg) autoAdjustColors(newBg.url);
   }
 }
+
+// =============================================================
+// --- Favorites CRUD ---
+// =============================================================
+
+function saveFavorite() {
+  const input   = document.getElementById('favNameInput');
+  const errorEl = document.getElementById('favNameError');
+  const name    = input.value.trim();
+
+  if (!name) {
+    errorEl.hidden = false;
+    input.classList.add('error');
+    input.focus();
+    setTimeout(() => { errorEl.hidden = true; input.classList.remove('error'); }, 2500);
+    return;
+  }
+
+  const bg = allBackgrounds()[state.backgroundIndex];
+  favorites.push({
+    id:            Date.now(),
+    name,
+    text:          state.text,
+    backgroundUrl: bg ? bg.url : '',
+    fontSize:      state.fontSize,
+    textColor:     state.textColor,
+    shadowColor:   state.shadowColor,
+    positionX:     state.positionX,
+    positionY:     state.positionY,
+    textAlign:     state.textAlign,
+    ratio:         state.ratio,
+  });
+
+  persistFavorites();
+  input.value = '';
+  // Invalidate dirty-check so list rebuilds
+  _favPrev.count = -1;
+  renderFavoritesList();
+  toast(`"${name}" guardado`);
+}
+
+function loadFavorite(id) {
+  const fav = favorites.find(f => f.id === id);
+  if (!fav) return;
+
+  const presetIdx = backgroundPresets.findIndex(p => p.url === fav.backgroundUrl);
+  let bgIndex;
+
+  if (presetIdx !== -1) {
+    // Preset: account for custom bgs prepended to allBackgrounds
+    bgIndex = state.customBackgrounds.length + presetIdx;
+  } else if (fav.backgroundUrl) {
+    // Custom bg: re-insert if not already present
+    // Note: direct mutation of state.customBackgrounds here is an accepted
+    // exception — setState is called immediately after with the new bgIndex.
+    let customIdx = state.customBackgrounds.indexOf(fav.backgroundUrl);
+    if (customIdx === -1) {
+      if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
+        state.customBackgrounds.pop();
+        toast('Fondo más antiguo eliminado para hacer espacio');
+      }
+      state.customBackgrounds.unshift(fav.backgroundUrl);
+      persistCustomBgs();
+      customIdx = 0;
+    }
+    bgIndex = customIdx;
+  } else {
+    bgIndex = 0;
+  }
+
+  setState({
+    text:            fav.text,
+    backgroundIndex: bgIndex,
+    fontSize:        fav.fontSize,
+    textColor:       fav.textColor,
+    shadowColor:     fav.shadowColor,
+    positionX:       fav.positionX,
+    positionY:       fav.positionY,
+    textAlign:       fav.textAlign,
+    ratio:           fav.ratio,
+  });
+}
+
+function deleteFavorite(id) {
+  const idx = favorites.findIndex(f => f.id === id);
+  if (idx === -1) return;
+
+  const removed = favorites.splice(idx, 1)[0];
+  persistFavorites();
+  _favPrev.count = -1; // invalidate dirty-check
+  renderFavoritesList();
+
+  let undone = false;
+  toast(`"${removed.name}" eliminado`, {
+    type: 'undo',
+    undoCallback: () => {
+      if (undone) return;
+      undone = true;
+      favorites.splice(idx, 0, removed); // re-insert at original position
+      persistFavorites();
+      _favPrev.count = -1;
+      renderFavoritesList();
+    },
+  });
+}
