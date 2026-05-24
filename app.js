@@ -476,6 +476,9 @@ function init() {
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (currentBg) autoAdjustColors(currentBg.url);
 
+  // Drag (temporary — moved inside wireEvents() in Task 9)
+  initMouseDrag();
+
   // wireEvents() — added in Task 9
 }
 
@@ -500,4 +503,41 @@ function persistCustomBgs() {
 
 function persistFavorites() {
   saveToLS(LS_FAVORITES, favorites);
+}
+
+// =============================================================
+// --- Drag (mouse) ---
+// =============================================================
+
+function initMouseDrag() {
+  let dragging = false;
+  let lastX, lastY;
+
+  _card.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('btn-remove-bg')) return;
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    _card.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect = _card.getBoundingClientRect();
+    const dx = (e.clientX - lastX) / rect.width  * 100;
+    const dy = (e.clientY - lastY) / rect.height * 100;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    setState({
+      positionX: clamp(state.positionX + dx, 5, 95),
+      positionY: clamp(state.positionY + dy, 5, 95),
+    });
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    _card.style.userSelect = '';
+  });
 }
