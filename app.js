@@ -392,7 +392,6 @@ async function _getImageBrightness(url) {
 
   return new Promise(resolve => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
