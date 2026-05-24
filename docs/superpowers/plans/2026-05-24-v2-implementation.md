@@ -27,21 +27,6 @@
 
 ---
 
-## Task 0: Crear rama de trabajo
-
-**Files:** ninguno
-
-- [ ] **Step 0.1: Crear y cambiar a rama feat/v2-rewrite**
-
-```bash
-git checkout -b feat/v2-rewrite
-git status
-```
-
-Esperado: `On branch feat/v2-rewrite`, working tree clean.
-
----
-
 ## Task 1: HTML skeleton + style.css
 
 **Files:**
@@ -2195,23 +2180,15 @@ function exportPNG() {
 }
 ```
 
-- [ ] **Step 13.2: Verificar export desde servidor local**
+- [ ] **Step 13.2: Verificar export**
 
-Nota: desde `file://` los fondos predefinidos pueden aparecer en blanco. Servir con un servidor local:
-
-```bash
-# Windows (cualquiera de estas):
-py -m http.server 8080
-python -m http.server 8080
-# Abrir: http://localhost:8080
-```
-
-Verificar:
+Abrir `index.html` en Chrome. Verificar:
 - Click en ↓ → overlay "Generando..." aparece, botón deshabilitado
 - Descarga `pineapple-time-card-16-9.png`
 - PNG sin UI chrome — solo card con fondo y texto
 - PNG resolución 2x del card (card 900px → PNG ≈1800px ancho)
-- Con fondo custom (base64): export funciona también desde `file://`
+
+Nota: desde `file://`, los fondos predefinidos (imágenes locales) pueden aparecer en blanco en el PNG por restricciones CORS del browser. Los fondos custom (base64) siempre exportan correctamente. Desde GitHub Pages (HTTPS) funciona todo.
 
 - [ ] **Step 13.3: Commit**
 
@@ -2229,7 +2206,7 @@ git commit -m "feat: add PNG export (html2canvas scale:2, toBlob non-blocking)"
 
 - [ ] **Step 14.1: Ejecutar el testing checklist completo**
 
-Servir desde `py -m http.server 8080`. Abrir `http://localhost:8080`.
+Abrir `index.html` en Chrome directamente.
 
 **Init:**
 - [ ] Carga con frase aleatoria en el textarea
