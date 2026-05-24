@@ -320,17 +320,6 @@ input[type="color"] {
 #sliderFontSize { flex: 1; min-width: 80px; }
 
 /* Position section */
-.slider-label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.85rem;
-  flex: 1;
-  min-width: 120px;
-}
-
-.slider-label input[type="range"] { flex: 1; border: none; }
-
 .align-buttons { display: flex; gap: 0.25rem; }
 
 .btn-align {

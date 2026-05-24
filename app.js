@@ -347,12 +347,6 @@ function renderControls() {
   if (slider)  slider.value = state.fontSize;
   if (display) display.textContent = `${state.fontSize.toFixed(1)}em`;
 
-  // Position sliders
-  const sliderX = document.getElementById('sliderX');
-  const sliderY = document.getElementById('sliderY');
-  if (sliderX) sliderX.value = state.positionX;
-  if (sliderY) sliderY.value = state.positionY;
-
   // Align buttons
   document.querySelectorAll('.btn-align').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.align === state.textAlign);
@@ -667,12 +661,6 @@ function wireEvents() {
   });
 
   // --- Position ---
-  document.getElementById('sliderX').addEventListener('input', e => {
-    setState({ positionX: parseInt(e.target.value, 10) });
-  });
-  document.getElementById('sliderY').addEventListener('input', e => {
-    setState({ positionY: parseInt(e.target.value, 10) });
-  });
   document.querySelectorAll('.btn-align').forEach(btn => {
     btn.addEventListener('click', () => setState({ textAlign: btn.dataset.align }));
   });
