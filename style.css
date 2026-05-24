@@ -254,7 +254,7 @@ main {
 
 #advancedPanel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.6rem;
   padding-bottom: 0.5rem;
 }
@@ -338,7 +338,7 @@ input[type="color"] {
 .btn-ratio { background: var(--sand-orange); }
 
 /* Favorites section */
-#favoritesSection { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
+#favoritesSection { flex-direction: column; align-items: stretch; }
 
 .fav-save-row { display: flex; gap: 0.4rem; }
 .fav-save-row input { flex: 1; }
