@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<!-- SpongeBob Time Card Generator -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pineapple Time Generator</title>
+  <link href="https://fonts.cdnfonts.com/css/some-time-later" rel="stylesheet">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --sponge-yellow: #FFD800;
+      --sponge-blue: #0070BB;
+      --ocean-dark: #0a1626;
+      --ocean-mid: #1E2F45;
+      --ocean-light: #2d436c;
+      --patrick-pink: #FF5252;
+      --seaweed-green: #8BC34A;
+      --jellyfish-purple: #9C27B0;
+      --sand-orange: #e67e22;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--ocean-dark);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="%23ffffff33"/></svg>');
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px 5px;
+    }
+
+    .app-title {
+      color: var(--sponge-yellow);
+      text-shadow: 2px 2px 0 var(--sponge-blue);
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      font-family: 'Some Time Later', sans-serif;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .tv {
+      background: #111;
+      border: none;
+      border-radius: 0;
+      width: 100%;
+      aspect-ratio: 16/9;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .tv.ratio-4-3 {
+      aspect-ratio: 4/3;
+      transform: scale(1.01);
+    }
+
+    .screen {
+      background-size: cover;
+      background-position: center;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3e1600;
+      font-size: 3em;
+      text-align: center;
+      position: relative;
+      box-sizing: border-box;
+      padding: 20px;
+      text-shadow: 2px 2px 0 #ffeb99, -2px -2px 0 #ffeb99;
+      font-family: 'Some Time Later', sans-serif;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .screen:active {
+      cursor: grabbing;
+    }
+
+    .compact-controls {
+      background-color: var(--ocean-mid);
+      border-radius: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 5px;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid var(--ocean-light);
+      margin-bottom: 8px;
+    }
+
+    .tab {
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.9em;
+      border-radius: 5px 5px 0 0;
+      transition: all 0.2s;
+      opacity: 0.7;
+    }
+
+    .tab.active {
+      background-color: var(--sponge-blue);
+      color: var(--sponge-yellow);
+      opacity: 1;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    input, select, button {
+      font-size: 0.9em;
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid var(--ocean-light);
+      background-color: #121f32;
+      color: #fff;
+    }
+
+    input[type="text"] {
+      width: calc(100% - 10px);
+    }
+
+    select {
+      background-color: #121f32;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button {
+      background-color: var(--sponge-blue);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      padding: 5px 10px;
+      white-space: nowrap;
+      min-width: fit-content;
+    }
+
+    button:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .btn-random   { background-color: var(--patrick-pink); }
+    .btn-bg       { background-color: var(--seaweed-green); }
+    .btn-colors   { background: linear-gradient(135deg, var(--patrick-pink) 0%, var(--sponge-blue) 50%, var(--seaweed-green) 100%); }
+    .btn-download { background-color: var(--jellyfish-purple); }
+    .btn-ratio    { background-color: var(--sand-orange); }
+
+    .btn-small {
+      padding: 3px 6px;
+      font-size: 0.8em;
+    }
+
+    .btn-small.active {
+      background-color: var(--sponge-yellow);
+      color: var(--ocean-dark);
+      font-weight: bold;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: linear-gradient(to right, #121f32, var(--sponge-blue));
+      border-radius: 5px;
+      outline: none;
+      transition: background 0.3s;
+      width: 100%;
+    }
+
+    input[type="range"]:hover {
+      background: linear-gradient(to right, #121f32, var(--sponge-yellow));
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--sponge-yellow);
+      cursor: pointer;
+      border: 1px solid var(--sponge-blue);
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--sponge-blue);
+      transform: scale(1.1);
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      padding: 0;
+    }
+
+    .color-controls {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .color-label {
+      font-size: 0.8em;
+      white-space: nowrap;
+    }
+
+    .position-controls {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 5px 10px;
+      align-items: center;
+      margin-top: 5px;
+      background: rgba(18, 31, 50, 0.1);
+      border-radius: 5px;
+      padding: 8px;
+      border: 1px solid rgba(0, 112, 187, 0.2);
+    }
+
+    .position-label {
+      font-size: 0.85em;
+      white-space: nowrap;
+      color: #E3F2FD;
+      font-weight: 500;
+    }
+
+    .position-value {
+      font-size: 0.75em;
+      background: rgba(255, 216, 0, 0.15);
+      padding: 2px 5px;
+      border-radius: 3px;
+      min-width: 38px;
+      text-align: right;
+      padding-right: 5px;
+      color: var(--sponge-yellow);
+      font-weight: 600;
+    }
+
+    .thumbnails-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+      gap: 5px;
+      padding: 5px 0;
+      margin-bottom: 5px;
+      max-width: 100%;
+    }
+
+    .thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      border: 2px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+      background-size: cover;
+      background-position: center;
+      transition: all 0.2s;
+    }
+
+    .thumbnail:hover  { border-color: var(--sponge-yellow); }
+    .thumbnail.active { border-color: var(--sponge-blue); box-shadow: 0 0 8px rgba(0, 112, 187, 0.6); }
+
+    .thumbnail-remove-btn {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #FF5252;
+      color: white;
+      border-radius: 50%;
+      width: 15px;
+      height: 15px;
+      font-size: 10px;
+      line-height: 15px;
+      text-align: center;
+      display: none;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+
+    .upload-btn {
+      background-color: #2196F3;
+      color: white;
+      border-radius: 4px;
+      transition: all 0.3s;
+      font-weight: bold;
+      text-align: center;
+      padding: 5px;
+      font-size: 0.8em;
+      cursor: pointer;
+    }
+
+    #imageUpload {
+      display: none;
+    }
+
+    #ratio-indicator {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: var(--sponge-yellow);
+      padding: 8px 15px;
+      font-size: 1.2em;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      text-shadow: 2px 2px 0 var(--sponge-blue);
+      z-index: 100;
+      pointer-events: none;
+      border: 2px solid var(--sponge-blue);
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    footer {
+      margin-top: 10px;
+      text-align: center;
+      color: #78909C;
+      font-size: 0.7em;
+    }
+
+    footer a {
+      color: #4FC3F7;
+      text-decoration: none;
+    }
+
+    .btn-save-favorite {
+      background-color: var(--seaweed-green);
+      margin-left: 5px;
+    }
+
+    .favorites-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border-radius: 5px;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .favorite-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid var(--ocean-light);
+      transition: all 0.2s;
+    }
+
+    .favorite-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .favorite-name {
+      flex-grow: 1;
+      margin-right: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .favorite-actions {
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-load-favorite, .btn-delete-favorite {
+      padding: 3px 8px;
+      font-size: 0.8em;
+    }
+
+    .btn-load-favorite  { background-color: var(--sponge-blue); }
+    .btn-delete-favorite { background-color: var(--patrick-pink); }
+
+    .no-favorites {
+      padding: 10px;
+      text-align: center;
+      color: #78909C;
+      font-style: italic;
+      font-size: 0.9em;
+    }
+
+    .favorite-thumbnail {
+      width: 30px;
+      height: 20px;
+      border-radius: 3px;
+      margin-right: 8px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 22, 38, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .confirm-modal-content {
+      background: var(--ocean-mid);
+      border: 2px solid var(--sponge-blue);
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .confirm-modal-title {
+      color: var(--sponge-yellow);
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 0 var(--sponge-blue);
+    }
+
+    .confirm-modal-message {
+      color: #E3F2FD;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .confirm-modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .confirm-modal-buttons button {
+      flex: 1;
+      padding: 8px;
+      font-size: 1em;
+    }
+
+    .confirm-modal-buttons .btn-cancel  { background-color: var(--ocean-light); }
+    .confirm-modal-buttons .btn-confirm { background-color: var(--patrick-pink); }
+
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .download-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.7);
+      color: #FFD800;
+      font-size: 1em;
+      z-index: 999;
+    }
+
+    @media (min-width: 500px) {
+      .color-controls-wrapper {
+        display: flex;
+        justify-content: space-between;
+        gap: 5px;
+      }
+
+      .color-controls {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="app-title">Pineapple Time Generator</h1>
+
+  <div class="container">
+    <div class="tv" id="tv">
+      <div class="screen" id="timeCard"></div>
+      <div id="ratio-indicator">FORMAT 16:9</div>
+    </div>
+
+    <div class="compact-controls">
+      <div class="tabs">
+        <div class="tab active" data-tab="basic">Text & Quick Phrases</div>
+        <div class="tab" data-tab="style">Style</div>
+        <div class="tab" data-tab="backgrounds">Backgrounds</div>
+        <div class="tab" data-tab="favorites">Favorites</div>
+      </div>
+
+      <!-- Text & Quick Phrases -->
+      <div class="tab-content active" id="tab-basic">
+        <div class="control-row">
+          <input type="text" id="textInput" placeholder="Write your time card...">
+        </div>
+        <div class="control-row">
+          <select id="phraseSelect">
+            <option value="" disabled selected>Quick phrases</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <button id="btnRandom" class="btn-random">Random Phrase</button>
+          <button id="btnRandomBg" class="btn-bg">Random Background</button>
+          <button id="btnRandomColorsBasic" class="btn-colors">Random Colors</button>
+        </div>
+      </div>
+
+      <!-- Style -->
+      <div class="tab-content" id="tab-style">
+        <div style="background: rgba(18, 31, 50, 0.1); border-radius: 5px; padding: 8px; border: 1px solid rgba(0, 112, 187, 0.2); margin-bottom: 8px;">
+          <div class="control-row">
+            <span class="color-label">Font Size:</span>
+            <div style="display: flex; gap: 5px; align-items: center; flex: 1;">
+              <button id="btnFontSizeMinus" class="btn-small" style="padding: 3px 8px;">-</button>
+              <input type="range" id="fontSize" min="1" max="6" step="0.1" value="3" style="flex: 1;">
+              <button id="btnFontSizePlus" class="btn-small" style="padding: 3px 8px;">+</button>
+            </div>
+          </div>
+          <div class="color-controls-wrapper">
+            <div class="color-controls">
+              <span class="color-label">Text:</span>
+              <input type="color" id="fontColor" value="#3e1600">
+            </div>
+            <div class="color-controls">
+              <span class="color-label">Shadow:</span>
+              <input type="color" id="shadowColor" value="#ffeb99">
+            </div>
+            <button id="btnRandomColors" class="btn-colors btn-small">Random Colors</button>
+          </div>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--ocean-light); margin: 8px 0;">
+        <div class="position-controls">
+          <span class="position-label">Horizontal:</span>
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <input type="range" id="textPositionX" min="0" max="100" step="1" value="50">
+            <span class="position-value" id="textPositionXValue">50%</span>
+          </div>
+          <span class="position-label">Vertical:</span>
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <input type="range" id="textPositionY" min="0" max="100" step="1" value="50">
+            <span class="position-value" id="textPositionYValue">50%</span>
+          </div>
+          <span class="position-label">Text Align:</span>
+          <div style="display: flex; gap: 5px;">
+            <button id="btnAlignLeft"   class="btn-small" style="flex: 1; padding: 3px 0;">◀ Left</button>
+            <button id="btnAlignCenter" class="btn-small active" style="flex: 1; padding: 3px 0;">● Center</button>
+            <button id="btnAlignRight"  class="btn-small" style="flex: 1; padding: 3px 0;">▶ Right</button>
+          </div>
+          <button id="btnResetPosition" class="btn-small" style="grid-column: span 2; margin-top: 5px;">Reset Position</button>
+        </div>
+      </div>
+
+      <!-- Backgrounds -->
+      <div class="tab-content" id="tab-backgrounds">
+        <div class="thumbnails-row" id="backgroundThumbnails"></div>
+        <div class="control-row">
+          <label for="imageUpload" class="upload-btn">Upload background</label>
+          <input id="imageUpload" type="file" accept="image/*">
+        </div>
+      </div>
+
+      <!-- Favorites -->
+      <div class="tab-content" id="tab-favorites">
+        <div class="control-row" style="display: flex; align-items: center; gap: 5px;">
+          <input type="text" id="favoriteName" placeholder="Name your favorite preset..." style="flex: 1; width: auto;">
+          <button id="btnSaveFavorite" class="btn-save-favorite" style="white-space: nowrap;">Save Current</button>
+        </div>
+        <div class="control-row" style="gap: 5px;">
+          <button id="btnExportFavorites" class="btn-bg" style="flex: 1;">Export All</button>
+          <button id="btnImportFavorites" class="btn-colors" style="flex: 1;">Import</button>
+          <input id="importFavoritesInput" type="file" accept=".json" style="display: none;">
+        </div>
+        <div id="favoritesList" class="favorites-list">
+          <p class="no-favorites">No favorites saved yet. Create your design and save it!</p>
+        </div>
+      </div>
+
+      <!-- Action buttons (always visible) -->
+      <div class="action-buttons">
+        <button id="btnDownload" class="btn-download">Download</button>
+        <button id="btnRatio" class="btn-ratio">16:9 → 4:3</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Made with ❤️ by <a href="" target="_blank">m3m3nt0</a>
+  </footer>
+
+  <script>
+    const phrases = [
+      "3 Days Later...", "2000 Years Later", "6½ Hours Later", "A Few Inches Later", "Day Two", "Day Three", "Day Four",
+      "A Few Moments Later", "One Eternity Later", "Three Days Later", "Twelve Seconds Later", "3:28 AM", "Three Weeks Later",
+      "Many Months Later", "So much later that the old narrator got tired of waiting and they had to hire a new one",
+      "Tomorrow", "Tomorrow for Sure...", "Eventually...", "Uhhh...", "12:00 Midnight", "One Hour Later", "Two Hours Later",
+      "Three Hours Later", "Please Stand By", "Meanwhile", "8:01 PM", "The Next Day", "Later...", "Twenty Minutes Later",
+      "Six Hours Later", "Several Bad Puns Later", "70 Years Later", "Later That Same Evening", "Several Days Later",
+      "6 Months Later...", "4 to 6 Weeks Later", "One Minute, Thirty Seven Seconds Later"
+    ];
+
+    const FAVORITES_KEY = 'pineappleTimeGeneratorFavorites';
+    const el = id => document.getElementById(id);
+
+    const backgroundPresets = [
+      { url: "backgrounds/band-geeks.jpg",         isCustom: false },
+      { url: "backgrounds/club-spongebob.jpg",      isCustom: false },
+      { url: "backgrounds/frankendoodle.jpg",       isCustom: false },
+      { url: "backgrounds/fry-cook-games.jpg",      isCustom: false },
+      { url: "backgrounds/gary-bath.jpg",           isCustom: false },
+      { url: "backgrounds/graveyard-shift.jpg",     isCustom: false },
+      { url: "backgrounds/im-with-stupid.jpg",      isCustom: false },
+      { url: "backgrounds/jellyfish-hunter.jpg",    isCustom: false },
+      { url: "backgrounds/krusty-love.png",         isCustom: false },
+      { url: "backgrounds/pressure.jpg",            isCustom: false },
+      { url: "backgrounds/procrastination.jpg",     isCustom: false },
+      { url: "backgrounds/sandy-worm.jpg",          isCustom: false },
+      { url: "backgrounds/shanghaied.jpg",          isCustom: false },
+      { url: "backgrounds/spongeguard-on-duty.png", isCustom: false },
+      { url: "backgrounds/squid-on-strike.png",     isCustom: false }
+    ];
+
+    let backgrounds = [...backgroundPresets];
+    let is16by9 = true;
+
+    const timeCard           = el('timeCard');
+    const textInput          = el('textInput');
+    const phraseSelect       = el('phraseSelect');
+    const backgroundThumbs   = el('backgroundThumbnails');
+
+    // --- Tabs ---
+
+    function setupTabs() {
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        });
+      });
+    }
+
+    // --- Text ---
+
+    function updateText(text) {
+      timeCard.textContent = text || 'The Next Day...';
+    }
+
+    function updateTextPosition(xPos = 50, yPos = 50, textAlign = null) {
+      const x = Number(xPos);
+      const y = Number(yPos);
+
+      timeCard.style.display       = 'flex';
+      timeCard.style.flexDirection = 'column';
+      timeCard.style.justifyContent = 'center';
+      timeCard.style.alignItems    = 'center';
+      timeCard.style.height        = '100%';
+      timeCard.style.boxSizing     = 'border-box';
+
+      // Create text wrapper for positioning if it doesn't exist yet
+      let textWrapper = document.querySelector('.text-wrapper');
+      if (!textWrapper) {
+        textWrapper = document.createElement('div');
+        textWrapper.className = 'text-wrapper';
+        textWrapper.style.position   = 'relative';
+        textWrapper.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        textWrapper.style.width      = '100%';
+
+        if (timeCard.childNodes.length && timeCard.childNodes[0].nodeType === Node.TEXT_NODE) {
+          const text = timeCard.textContent;
+          timeCard.textContent = '';
+          textWrapper.textContent = text;
+        } else {
+          textWrapper.textContent = timeCard.textContent || 'The Next Day...';
+          timeCard.textContent = '';
+        }
+        timeCard.appendChild(textWrapper);
+      }
+
+      // 0-100 → normalized -1 to 1, with easing and safe margins
+      const normalizedX = (x - 50) / 50;
+      const normalizedY = (y - 50) / 50;
+      const easeX = normalizedX * (0.7 + Math.abs(normalizedX) * 0.2);
+      const easeY = normalizedY * (0.9 + Math.abs(normalizedY) * 1.2);
+
+      textWrapper.style.transform = `translate(${(easeX * 60).toFixed(2)}%, ${(easeY * 120).toFixed(2)}%)`;
+
+      const vPad = Math.max(2, 20 - Math.abs(normalizedY) * 18);
+      const hPad = Math.max(15, 25 - Math.abs(normalizedX) * 8);
+      timeCard.style.padding = `${vPad}px ${hPad}px`;
+
+      if (textAlign) {
+        textWrapper.style.textAlign = textAlign;
+        if (el('btnAlignLeft'))   el('btnAlignLeft').classList.toggle('active',   textAlign === 'left');
+        if (el('btnAlignCenter')) el('btnAlignCenter').classList.toggle('active', textAlign === 'center');
+        if (el('btnAlignRight'))  el('btnAlignRight').classList.toggle('active',  textAlign === 'right');
+      }
+
+      if (el('textPositionXValue')) el('textPositionXValue').textContent = x + '%';
+      if (el('textPositionYValue')) el('textPositionYValue').textContent = y + '%';
+    }
+
+    // --- Phrases ---
+
+    function fillPhrases() {
+      phrases.forEach(phrase => {
+        const option = document.createElement('option');
+        option.value = option.textContent = phrase;
+        phraseSelect.appendChild(option);
+      });
+    }
+
+    // --- Backgrounds ---
+
+    function createThumbnail(url, index, isCustom = false) {
+      const thumb = document.createElement('div');
+      thumb.className = 'thumbnail';
+      thumb.style.backgroundImage = `url('${url}')`;
+      thumb.dataset.index = index;
+
+      if (isCustom) {
+        thumb.style.position = 'relative';
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'thumbnail-remove-btn';
+        removeBtn.textContent = '×';
+        thumb.appendChild(removeBtn);
+
+        thumb.addEventListener('mouseenter', () => removeBtn.style.display = 'block');
+        thumb.addEventListener('mouseleave', () => removeBtn.style.display = 'none');
+
+        removeBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const i = parseInt(thumb.dataset.index);
+          backgrounds.splice(i, 1);
+          updateThumbnails();
+          if (backgrounds.length > 0) {
+            document.querySelector(`.thumbnail[data-index="${Math.min(i, backgrounds.length - 1)}"]`).click();
+          }
+        });
+      }
+
+      thumb.addEventListener('click', () => {
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+        timeCard.style.backgroundImage = `url('${url}')`;
+        autoAdjustColors(url);
+      });
+
+      return thumb;
+    }
+
+    function updateThumbnails() {
+      backgroundThumbs.innerHTML = '';
+      backgrounds.forEach((bg, i) => backgroundThumbs.appendChild(createThumbnail(bg.url, i, bg.isCustom)));
+
+      if (!document.querySelector('.thumbnail.active') && backgrounds.length > 0) {
+        backgroundThumbs.querySelector('.thumbnail').click();
+      }
+    }
+
+    // --- Colors ---
+
+    function randomHexColor() {
+      let c = '#';
+      for (let i = 0; i < 6; i++) c += '0123456789ABCDEF'[Math.floor(Math.random() * 16)];
+      return c;
+    }
+
+    function colorBrightness(hex) {
+      return (parseInt(hex.substring(1, 3), 16) * 299 +
+              parseInt(hex.substring(3, 5), 16) * 587 +
+              parseInt(hex.substring(5, 7), 16) * 114) / 1000;
+    }
+
+    function generateDarkColor()  { let c; do { c = randomHexColor(); } while (colorBrightness(c) > 180); return c; }
+    function generateLightColor() { let c; do { c = randomHexColor(); } while (colorBrightness(c) < 180); return c; }
+
+    function analyzeBackgroundBrightness(imageUrl, callback) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.height = 100;
+        ctx.drawImage(img, 0, 0, 100, 100);
+
+        try {
+          const data = ctx.getImageData(0, 0, 100, 100).data;
+          let total = 0, count = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            total += (data[i] * 299 + data[i+1] * 587 + data[i+2] * 114) / 1000;
+            count++;
+          }
+          callback(total / count);
+        } catch (e) {
+          // CORS/taint error — use neutral fallback
+          callback(128);
+        }
+      };
+
+      img.onerror = () => callback(128);
+      img.src = imageUrl;
+    }
+
+    function autoAdjustColors(backgroundUrl) {
+      analyzeBackgroundBrightness(backgroundUrl, brightness => {
+        const dark  = brightness < 128;
+        const textColor   = dark ? generateLightColor() : generateDarkColor();
+        const shadowColor = dark ? generateDarkColor()  : generateLightColor();
+
+        el('fontColor').value   = textColor;
+        el('shadowColor').value = shadowColor;
+        timeCard.style.color      = textColor;
+        timeCard.style.textShadow = `2px 2px 0 ${shadowColor}, -2px -2px 0 ${shadowColor}`;
+      });
+    }
+
+    // --- Aspect ratio ---
+
+    function applyRatio(newIs16by9) {
+      is16by9 = newIs16by9;
+      const indicator = el('ratio-indicator');
+
+      el('tv').classList.toggle('ratio-4-3', !is16by9);
+      el('btnRatio').textContent = is16by9 ? "16:9 → 4:3" : "4:3 → 16:9";
+
+      indicator.textContent        = is16by9 ? "FORMAT 16:9"          : "FORMAT 4:3";
+      indicator.style.color        = is16by9 ? "var(--sponge-yellow)" : "var(--sand-orange)";
+      indicator.style.borderColor  = is16by9 ? "var(--sponge-blue)"   : "var(--sand-orange)";
+      indicator.style.background   = "rgba(0, 0, 0, 0.8)";
+      indicator.style.opacity      = "1";
+      setTimeout(() => { indicator.style.opacity = "0"; }, 2000);
+    }
+
+    // --- Favorites ---
+
+    function saveCurrentAsFavorite(name) {
+      if (!name || !name.trim()) {
+        showNotification('Please enter a name for your favorite preset', 'var(--sand-orange)');
+        const nameInput = el('favoriteName');
+        nameInput.style.borderColor = 'var(--patrick-pink)';
+        nameInput.focus();
+        setTimeout(() => { nameInput.style.borderColor = ''; }, 2000);
+        return;
+      }
+
+      const activeThumb = document.querySelector('.thumbnail.active');
+      if (!activeThumb) return;
+
+      const textWrapper = timeCard.querySelector('.text-wrapper');
+      const textAlign   = (textWrapper && textWrapper.style.textAlign) || 'center';
+
+      const favorite = {
+        id: Date.now(), // timestamp as unique ID
+        name: name.trim(),
+        text: timeCard.textContent,
+        backgroundUrl: backgrounds[parseInt(activeThumb.dataset.index)].url,
+        fontSize:      el('fontSize').value,
+        textColor:     el('fontColor').value,
+        shadowColor:   el('shadowColor').value,
+        aspectRatio:   is16by9 ? '16:9' : '4:3',
+        textPositionX: el('textPositionX') ? el('textPositionX').value : 50,
+        textPositionY: el('textPositionY') ? el('textPositionY').value : 50,
+        textAlign
+      };
+
+      const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      favorites.push(favorite);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      updateFavoritesList();
+      el('favoriteName').value = '';
+      return favorite;
+    }
+
+    function loadFavoritePreset(favorite) {
+      textInput.value = favorite.text;
+      updateText(favorite.text);
+
+      let bgIndex = backgrounds.findIndex(b => b.url === favorite.backgroundUrl);
+      if (bgIndex < 0) {
+        // Background was deleted or is from another session — re-add as custom
+        backgrounds.push({ url: favorite.backgroundUrl, isCustom: true });
+        updateThumbnails();
+        bgIndex = backgrounds.length - 1;
+      }
+
+      document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+      const thumb = document.querySelector(`.thumbnail[data-index="${bgIndex}"]`);
+      if (thumb) {
+        thumb.classList.add('active');
+        timeCard.style.backgroundImage = `url('${favorite.backgroundUrl}')`;
+      }
+
+      el('fontSize').value = favorite.fontSize;
+      timeCard.style.fontSize = favorite.fontSize + 'em';
+
+      el('fontColor').value = favorite.textColor;
+      timeCard.style.color  = favorite.textColor;
+
+      el('shadowColor').value   = favorite.shadowColor;
+      timeCard.style.textShadow = `2px 2px 0 ${favorite.shadowColor}, -2px -2px 0 ${favorite.shadowColor}`;
+
+      // textPositionX/Y added after initial release — guard for backward compatibility
+      if (favorite.textPositionX !== undefined && favorite.textPositionY !== undefined) {
+        el('textPositionX').value = favorite.textPositionX;
+        el('textPositionY').value = favorite.textPositionY;
+        updateTextPosition(favorite.textPositionX, favorite.textPositionY, favorite.textAlign || 'center');
+      } else {
+        el('textPositionX').value = 50;
+        el('textPositionY').value = 50;
+        updateTextPosition(50, 50, favorite.textAlign || 'center');
+      }
+
+      if (favorite.aspectRatio) applyRatio(favorite.aspectRatio === '16:9');
+    }
+
+    function deleteFavorite(id) {
+      // IDs are timestamps (numbers) but may arrive as strings
+      const numericId = parseInt(id);
+      let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      favorites = favorites.filter(f => parseInt(f.id) !== numericId);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      updateFavoritesList();
+    }
+
+    function updateFavoritesList() {
+      const list = el('favoritesList');
+      list.innerHTML = '';
+
+      const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+
+      if (favorites.length === 0) {
+        const msg = document.createElement('p');
+        msg.className   = 'no-favorites';
+        msg.textContent = 'No favorites saved yet. Create your design and save it!';
+        list.appendChild(msg);
+        return;
+      }
+
+      favorites.forEach(fav => {
+        const item = document.createElement('div');
+        item.className = 'favorite-item';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'favorite-thumbnail';
+        thumb.style.backgroundImage = `url('${fav.backgroundUrl}')`;
+        item.appendChild(thumb);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className   = 'favorite-name';
+        nameSpan.textContent = fav.name;
+        nameSpan.title       = fav.text;
+        item.appendChild(nameSpan);
+
+        const actions = document.createElement('div');
+        actions.className = 'favorite-actions';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className   = 'btn-load-favorite';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => loadFavoritePreset(fav));
+        actions.appendChild(loadBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className   = 'btn-delete-favorite';
+        deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', () => {
+          showConfirmModal(
+            'Delete Favorite?',
+            `Are you sure you want to delete "${fav.name}"?`,
+            () => {
+              deleteFavorite(parseInt(fav.id));
+              showNotification(`"${fav.name}" deleted`, 'var(--patrick-pink)');
+            },
+            null, 'Delete', 'Cancel'
+          );
+        });
+        actions.appendChild(deleteBtn);
+
+        item.appendChild(actions);
+        list.appendChild(item);
+      });
+    }
+
+    function exportFavorites() {
+      const favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      if (favorites.length === 0) {
+        showNotification('No favorites to export!', 'var(--sand-orange)');
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(favorites, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href     = url;
+      link.download = `pineapple-favorites-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showNotification(`Exported ${favorites.length} favorite(s)!`, 'var(--seaweed-green)');
+    }
+
+    function importFavorites(file) {
+      if (!file) return;
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+
+          if (!Array.isArray(imported)) throw new Error('Invalid file format: expected an array of favorites');
+
+          const valid = imported.filter(f => f.name && f.text && f.backgroundUrl);
+          if (valid.length === 0) throw new Error('No valid favorites found in file');
+
+          let existing = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+
+          if (existing.length === 0) {
+            valid.forEach((f, i) => { f.id = Date.now() + i; });
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(valid));
+            updateFavoritesList();
+            showNotification(`Imported ${valid.length} favorite(s)!`, 'var(--sponge-blue)');
+            return;
+          }
+
+          // Ask user how to handle existing favorites
+          showConfirmModal(
+            'Import Favorites',
+            `Found ${valid.length} favorite(s) in file. You currently have ${existing.length}.\n\nClick "Merge" to keep existing + add new, or "Replace" to remove all existing.`,
+            () => { // Merge
+              const maxId = existing.reduce((m, f) => Math.max(m, parseInt(f.id) || 0), 0);
+              valid.forEach((f, i) => { f.id = maxId + i + 1; existing.push(f); });
+              localStorage.setItem(FAVORITES_KEY, JSON.stringify(existing));
+              updateFavoritesList();
+              showNotification(`Merged ${valid.length} favorite(s)!`, 'var(--seaweed-green)');
+            },
+            () => { // Replace
+              valid.forEach((f, i) => { f.id = Date.now() + i; });
+              localStorage.setItem(FAVORITES_KEY, JSON.stringify(valid));
+              updateFavoritesList();
+              showNotification(`Replaced with ${valid.length} favorite(s)!`, 'var(--sponge-blue)');
+            },
+            'Merge', 'Replace'
+          );
+
+        } catch (error) {
+          showNotification(`Error: ${error.message}`, 'var(--patrick-pink)');
+        }
+      };
+
+      reader.onerror = () => showNotification('Error reading file. Please try again.', 'var(--patrick-pink)');
+      reader.readAsText(file);
+    }
+
+    // --- UI helpers ---
+
+    function showNotification(message, bgColor = 'var(--seaweed-green)') {
+      const n = document.createElement('div');
+      n.className       = 'notification';
+      n.style.background = bgColor;
+      n.textContent     = message;
+      document.body.appendChild(n);
+      setTimeout(() => {
+        n.style.opacity = '0';
+        setTimeout(() => n.remove(), 300);
+      }, 3000);
+    }
+
+    function showConfirmModal(title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel') {
+      const modal = document.createElement('div');
+      modal.className = 'confirm-modal';
+
+      const content = document.createElement('div');
+      content.className = 'confirm-modal-content';
+
+      const titleEl = document.createElement('div');
+      titleEl.className   = 'confirm-modal-title';
+      titleEl.textContent = title;
+      content.appendChild(titleEl);
+
+      const msgEl = document.createElement('div');
+      msgEl.className   = 'confirm-modal-message';
+      msgEl.textContent = message;
+      content.appendChild(msgEl);
+
+      const buttons = document.createElement('div');
+      buttons.className = 'confirm-modal-buttons';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className   = 'btn-cancel';
+      cancelBtn.textContent = cancelText;
+      cancelBtn.addEventListener('click', () => { modal.remove(); if (onCancel) onCancel(); });
+      buttons.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className   = 'btn-confirm';
+      confirmBtn.textContent = confirmText;
+      confirmBtn.addEventListener('click', () => { modal.remove(); if (onConfirm) onConfirm(); });
+      buttons.appendChild(confirmBtn);
+
+      content.appendChild(buttons);
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+
+      // Close on overlay click
+      modal.addEventListener('click', e => {
+        if (e.target === modal) { modal.remove(); if (onCancel) onCancel(); }
+      });
+
+      confirmBtn.focus();
+    }
+
+    // --- Init ---
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupTabs();
+      fillPhrases();
+      updateText();
+      updateThumbnails();
+      updateFavoritesList();
+
+      const randomIndex = Math.floor(Math.random() * backgrounds.length);
+      document.querySelector(`.thumbnail[data-index="${randomIndex}"]`).classList.add('active');
+      timeCard.style.backgroundImage = `url('${backgrounds[randomIndex].url}')`;
+
+      const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+      textInput.value = randomPhrase;
+      updateText(randomPhrase);
+
+      el('ratio-indicator').style.opacity = "0";
+      updateTextPosition(50, 50);
+
+      // --- Position sliders ---
+
+      el('textPositionX').addEventListener('input', function() {
+        updateTextPosition(Number(this.value), Number(el('textPositionY').value), timeCard.style.textAlign);
+      });
+
+      el('textPositionY').addEventListener('input', function() {
+        updateTextPosition(Number(el('textPositionX').value), Number(this.value), timeCard.style.textAlign);
+      });
+
+      // --- Alignment ---
+
+      el('btnAlignLeft').addEventListener('click',   () => updateTextPosition(+el('textPositionX').value, +el('textPositionY').value, 'left'));
+      el('btnAlignCenter').addEventListener('click', () => updateTextPosition(+el('textPositionX').value, +el('textPositionY').value, 'center'));
+      el('btnAlignRight').addEventListener('click',  () => updateTextPosition(+el('textPositionX').value, +el('textPositionY').value, 'right'));
+
+      el('btnResetPosition').addEventListener('click', () => {
+        el('textPositionX').value = el('textPositionY').value = 50;
+        updateTextPosition(50, 50, 'center');
+      });
+
+      // --- Drag to reposition text ---
+
+      let isDragging = false, dragStartX = 0, dragStartY = 0, startPosX = 0, startPosY = 0;
+
+      timeCard.addEventListener('mousedown', e => {
+        isDragging = true;
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        startPosX  = +el('textPositionX').value;
+        startPosY  = +el('textPositionY').value;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const rect = timeCard.getBoundingClientRect();
+        const newX = Math.max(0, Math.min(100, Math.round(startPosX + (e.clientX - dragStartX) / rect.width  * 100)));
+        const newY = Math.max(0, Math.min(100, Math.round(startPosY + (e.clientY - dragStartY) / rect.height * 100)));
+        el('textPositionX').value = newX;
+        el('textPositionY').value = newY;
+        updateTextPosition(newX, newY, timeCard.style.textAlign);
+      });
+
+      document.addEventListener('mouseup', () => { isDragging = false; });
+
+      // --- Text & phrase ---
+
+      textInput.addEventListener('input', e => updateText(e.target.value));
+
+      phraseSelect.addEventListener('change', () => {
+        if (phraseSelect.value) {
+          textInput.value = phraseSelect.value;
+          updateText(phraseSelect.value);
+        }
+      });
+
+      el('btnRandom').addEventListener('click', () => {
+        const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+        textInput.value = phrase;
+        updateText(phrase);
+      });
+
+      el('btnRandomBg').addEventListener('click', () => {
+        const idx = Math.floor(Math.random() * backgrounds.length);
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.thumbnail[data-index="${idx}"]`).classList.add('active');
+        const url = backgrounds[idx].url;
+        timeCard.style.backgroundImage = `url('${url}')`;
+        autoAdjustColors(url);
+      });
+
+      // --- Style ---
+
+      el('fontSize').addEventListener('input', e => { timeCard.style.fontSize = e.target.value + 'em'; });
+
+      el('btnFontSizePlus').addEventListener('click', () => {
+        const v = Math.min(6, parseFloat(el('fontSize').value) + 0.2);
+        el('fontSize').value = v;
+        timeCard.style.fontSize = v + 'em';
+      });
+
+      el('btnFontSizeMinus').addEventListener('click', () => {
+        const v = Math.max(1, parseFloat(el('fontSize').value) - 0.2);
+        el('fontSize').value = v;
+        timeCard.style.fontSize = v + 'em';
+      });
+
+      el('fontColor').addEventListener('input', e => { timeCard.style.color = e.target.value; });
+
+      el('shadowColor').addEventListener('input', e => {
+        timeCard.style.textShadow = `2px 2px 0 ${e.target.value}, -2px -2px 0 ${e.target.value}`;
+      });
+
+      function randomColorsForActiveBg(btn) {
+        const activeThumb = document.querySelector('.thumbnail.active');
+        if (!activeThumb) return;
+        autoAdjustColors(backgrounds[parseInt(activeThumb.dataset.index)].url);
+        btn.style.opacity = '0.6';
+        setTimeout(() => { btn.style.opacity = '1'; }, 800);
+      }
+
+      // Random Colors appears in both Style and Basic tabs
+      el('btnRandomColors').addEventListener('click',      function() { randomColorsForActiveBg(this); });
+      el('btnRandomColorsBasic').addEventListener('click', function() { randomColorsForActiveBg(this); });
+
+      // --- Background upload ---
+
+      el('imageUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          const url = ev.target.result;
+          backgrounds.unshift({ url, isCustom: true });
+          updateThumbnails();
+          document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+          document.querySelector('.thumbnail[data-index="0"]').classList.add('active');
+          timeCard.style.backgroundImage = `url('${url}')`;
+          autoAdjustColors(url);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // --- Download ---
+
+      el('btnDownload').addEventListener('click', () => {
+        const overlay = document.createElement('div');
+        overlay.className   = 'download-overlay';
+        overlay.textContent = 'Generating...';
+        el('tv').appendChild(overlay);
+
+        // Small delay to ensure overlay renders before capture
+        setTimeout(() => {
+          html2canvas(el('tv'), {
+            allowTaint: true,
+            useCORS: true,
+            backgroundColor: null,
+            removeContainer: true,
+            onclone: clonedDoc => {
+              const o = clonedDoc.querySelector('.download-overlay');
+              if (o) o.remove();
+            }
+          }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `pineapple-time-card-${is16by9 ? '16-9' : '4-3'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            overlay.textContent      = 'Done!';
+            overlay.style.background = 'rgba(0,112,187,0.7)';
+            setTimeout(() => overlay.remove(), 1000);
+          }).catch(() => {
+            overlay.textContent      = 'Error!';
+            overlay.style.background = 'rgba(255,0,0,0.7)';
+            setTimeout(() => overlay.remove(), 2000);
+          });
+        }, 50);
+      });
+
+      // --- Ratio ---
+
+      el('btnRatio').addEventListener('click', () => applyRatio(!is16by9));
+
+      // --- Favorites ---
+
+      el('btnSaveFavorite').addEventListener('click', () => {
+        const saved = saveCurrentAsFavorite(el('favoriteName').value);
+        if (saved) showNotification(`"${saved.name}" saved to favorites!`, 'var(--seaweed-green)');
+      });
+
+      el('btnExportFavorites').addEventListener('click', exportFavorites);
+
+      el('btnImportFavorites').addEventListener('click', () => el('importFavoritesInput').click());
+
+      el('importFavoritesInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          importFavorites(file);
+          e.target.value = ''; // reset so the same file can be imported again
+        }
+      });
+
+      // Ctrl+S → focus favorites name input (only when not already in an input)
+      document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault();
+          if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+            const favTab = document.querySelector('.tab[data-tab="favorites"]');
+            if (!favTab.classList.contains('active')) favTab.click();
+            el('favoriteName').focus();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
