@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pineapple Time Generator</title>
+  <link href="https://fonts.cdnfonts.com/css/some-time-later" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1 class="app-title">Pineapple Time Generator</h1>
+  </header>
+
+  <main>
+
+    <!-- Card preview -->
+    <div id="cardContainer">
+      <div id="timeCard">
+        <!-- .text-wrapper injected by render() -->
+      </div>
+      <div id="downloadOverlay" class="download-overlay" hidden>
+        <div class="spinner"></div>
+        <span>Generando...</span>
+      </div>
+    </div>
+
+    <!-- Background strip -->
+    <div id="bgStrip">
+      <!-- thumbnails injected by renderStrip() -->
+      <input type="file" id="bgUploadInput" accept="image/*" hidden>
+      <button id="btnBgUpload" class="btn-bg-upload" aria-label="Subir fondo">+</button>
+    </div>
+
+    <!-- Text row -->
+    <div id="textRow">
+      <textarea id="textInput" rows="1" placeholder="Escribe tu texto..."></textarea>
+      <button id="btnRandom" title="Frase aleatoria">↺</button>
+      <button id="btnDownload" title="Descargar PNG">↓</button>
+    </div>
+
+    <!-- Advanced panel -->
+    <div id="advancedSection">
+      <button id="btnToggleAdvanced" class="btn-toggle-advanced">▼ Personalizar</button>
+      <div id="advancedPanel" hidden>
+
+        <div class="panel-section" id="sectionColors">
+          <span class="panel-label">Colores</span>
+          <label class="color-label">Texto <input type="color" id="colorText" value="#3e1600"></label>
+          <label class="color-label">Sombra <input type="color" id="colorShadow" value="#ffeb99"></label>
+          <button id="btnRandomColors" class="btn-random-colors">Colores aleatorios</button>
+        </div>
+
+        <div class="panel-section" id="sectionSize">
+          <span class="panel-label">Tamaño de texto</span>
+          <button id="btnFontMinus" class="btn-font-step">−</button>
+          <span id="fontSizeDisplay">3.0em</span>
+          <button id="btnFontPlus"  class="btn-font-step">+</button>
+          <input type="range" id="sliderFontSize" min="0.5" max="8" step="0.1" value="3">
+        </div>
+
+        <div class="panel-section" id="sectionPosition">
+          <span class="panel-label">Posición</span>
+          <label class="slider-label">X <input type="range" id="sliderX" min="5" max="95" value="50"></label>
+          <label class="slider-label">Y <input type="range" id="sliderY" min="5" max="95" value="50"></label>
+          <div class="align-buttons">
+            <button id="btnAlignLeft"   class="btn-align" data-align="left">L</button>
+            <button id="btnAlignCenter" class="btn-align" data-align="center">C</button>
+            <button id="btnAlignRight"  class="btn-align" data-align="right">R</button>
+          </div>
+          <button id="btnResetPosition" class="btn-reset">Reset</button>
+        </div>
+
+        <div class="panel-section" id="sectionRatio">
+          <span class="panel-label">Formato</span>
+          <button id="btnRatio" class="btn-ratio">16:9 → 4:3</button>
+        </div>
+
+        <div class="panel-section" id="favoritesSection">
+          <span class="panel-label">Favoritos</span>
+          <div class="fav-save-row">
+            <input type="text" id="favNameInput" placeholder="Nombre del favorito">
+            <button id="btnSaveFavorite" class="btn-save-fav">Guardar</button>
+          </div>
+          <span id="favNameError" class="fav-error" hidden>Escribe un nombre</span>
+          <div id="favoritesList"></div>
+          <div class="fav-io-row">
+            <button id="btnExportFavorites" class="btn-export-fav">Exportar JSON</button>
+            <button id="btnImportFavorites" class="btn-import-fav">Importar JSON</button>
+            <input type="file" id="importFileInput" accept=".json" hidden>
+          </div>
+        </div>
+
+      </div><!-- /advancedPanel -->
+    </div><!-- /advancedSection -->
+
+  </main>
+
+  <!-- Import modal -->
+  <div id="importModal" hidden>
+    <div class="modal-overlay" id="importOverlay"></div>
+    <div class="modal-box">
+      <h2>Importar favoritos</h2>
+      <p id="importSummary"></p>
+      <div class="modal-buttons">
+        <button id="btnImportMerge"   class="btn-merge">Combinar</button>
+        <button id="btnImportReplace" class="btn-replace">Reemplazar</button>
+        <button id="btnImportCancel"  class="btn-cancel-modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer"></div>
+
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

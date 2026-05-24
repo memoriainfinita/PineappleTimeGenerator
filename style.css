@@ -1,0 +1,489 @@
+/* ============================================================
+   Custom Properties
+   ============================================================ */
+:root {
+  --sponge-yellow:   #FFD800;
+  --sponge-blue:     #0070BB;
+  --ocean-dark:      #0a1626;
+  --ocean-mid:       #1E2F45;
+  --ocean-light:     #2d436c;
+  --patrick-pink:    #FF5252;
+  --seaweed-green:   #8BC34A;
+  --jellyfish-purple:#9C27B0;
+  --sand-orange:     #e67e22;
+  --radius:          4px;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Enforce [hidden] even when an ID rule sets display:flex/grid.
+   UA stylesheet uses display:none without !important — ID selectors win otherwise. */
+[hidden] { display: none !important; }
+
+body {
+  background-color: var(--ocean-dark);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+button {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: white;
+}
+
+input[type="text"], input[type="range"], textarea {
+  border-radius: var(--radius);
+  border: 1px solid var(--ocean-light);
+  background: var(--ocean-mid);
+  color: white;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+}
+
+input[type="text"]::placeholder,
+textarea::placeholder { color: #667; }
+
+/* ============================================================
+   Header
+   ============================================================ */
+header {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ocean-light);
+}
+
+.app-title {
+  font-family: 'Some Time Later', sans-serif;
+  font-size: 1.6rem;
+  color: var(--sponge-yellow);
+  text-shadow: 2px 2px 0 var(--sponge-blue);
+}
+
+/* ============================================================
+   Main layout
+   ============================================================ */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ============================================================
+   Card
+   ============================================================ */
+#cardContainer {
+  position: relative;
+  width: 100%;
+}
+
+#timeCard {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  font-size: 16px;                    /* em base for text-wrapper */
+  font-family: 'Some Time Later', sans-serif;
+  background: #000 center / cover no-repeat;
+  overflow: hidden;
+  cursor: grab;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+  border-radius: var(--radius);
+}
+
+#timeCard:active { cursor: grabbing; }
+
+#timeCard.ratio-4-3 { aspect-ratio: 4 / 3; }
+
+.text-wrapper {
+  position: absolute;
+  width: 90%;
+  transform: translate(-50%, -50%);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  /* left, top, font-size, text-align set by renderCard() */
+}
+
+/* Download overlay — positioned on cardContainer, not timeCard.
+   html2canvas captures timeCard only, so overlay never appears in export. */
+.download-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 112, 187, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  color: white;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   Background strip
+   ============================================================ */
+#bgStrip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.4rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ocean-light) transparent;
+}
+
+.thumbnail-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbnail {
+  width: 64px;
+  height: 40px;
+  background: #333 center / cover no-repeat;
+  border-radius: var(--radius);
+  border: 2px solid #444;
+  cursor: pointer;
+  display: block;
+}
+
+.thumbnail:hover  { border-color: var(--sponge-yellow); }
+.thumbnail.active { border-color: var(--sponge-blue); box-shadow: 0 0 6px rgba(0,112,187,0.6); }
+
+.btn-remove-bg {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--patrick-pink);
+  color: white;
+  font-size: 9px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.strip-separator {
+  flex-shrink: 0;
+  width: 1px;
+  height: 32px;
+  background: var(--ocean-light);
+}
+
+.btn-bg-upload {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--ocean-mid);
+  border: 2px dashed var(--ocean-light);
+  color: var(--sponge-yellow);
+  font-size: 1.3rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   Text row
+   ============================================================ */
+#textRow {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+#textInput {
+  flex: 1;
+  height: 2.4rem;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+#btnRandom   { background: var(--patrick-pink);     flex-shrink: 0; font-size: 1.1rem; }
+#btnDownload { background: var(--jellyfish-purple); flex-shrink: 0; font-size: 1.1rem; }
+
+#btnDownload:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   Advanced panel
+   ============================================================ */
+#advancedSection { border-top: 1px solid var(--ocean-light); }
+
+.btn-toggle-advanced {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--sponge-yellow);
+  padding: 0.65rem 0;
+  font-size: 0.95rem;
+}
+
+#advancedPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+}
+
+/* [hidden] works here because the global [hidden] { display: none !important } rule
+   in the Base section overrides all author display rules, including ID selectors. */
+
+.panel-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.6rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius);
+}
+
+.panel-label {
+  font-size: 0.75rem;
+  color: #89a;
+  width: 100%;
+  margin-bottom: 0.1rem;
+}
+
+/* Colors section */
+.color-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+input[type="color"] {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.btn-random-colors {
+  background: linear-gradient(135deg, var(--patrick-pink), var(--sponge-blue), var(--seaweed-green));
+}
+
+/* Size section */
+.btn-font-step {
+  background: var(--ocean-mid);
+  border: 1px solid var(--ocean-light);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+#fontSizeDisplay {
+  font-size: 0.85rem;
+  min-width: 3rem;
+  text-align: center;
+  color: var(--sponge-yellow);
+}
+
+#sliderFontSize { flex: 1; min-width: 80px; }
+
+/* Position section */
+.slider-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 120px;
+}
+
+.slider-label input[type="range"] { flex: 1; border: none; }
+
+.align-buttons { display: flex; gap: 0.25rem; }
+
+.btn-align {
+  background: var(--ocean-mid);
+  border: 1px solid var(--ocean-light);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.btn-align.active { background: var(--sponge-blue); border-color: var(--sponge-blue); }
+
+.btn-reset { background: var(--ocean-mid); border: 1px solid var(--ocean-light); font-size: 0.8rem; }
+
+/* Ratio section */
+.btn-ratio { background: var(--sand-orange); }
+
+/* Favorites section */
+#favoritesSection { flex-direction: column; align-items: stretch; }
+
+.fav-save-row { display: flex; gap: 0.4rem; }
+.fav-save-row input { flex: 1; }
+
+/* Error state for name input */
+#favNameInput.error { border-color: var(--patrick-pink); }
+
+.fav-error { font-size: 0.8rem; color: var(--patrick-pink); }
+
+.btn-save-fav { background: var(--seaweed-green); flex-shrink: 0; }
+
+#favoritesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.fav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius);
+}
+
+.fav-name {
+  flex: 1;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fav-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+
+.btn-load-fav   { background: var(--sponge-blue);   padding: 0.2rem 0.5rem; font-size: 0.78rem; }
+.btn-delete-fav { background: var(--patrick-pink);  padding: 0.2rem 0.5rem; font-size: 0.78rem; }
+
+.fav-empty { font-size: 0.85rem; color: #667; font-style: italic; }
+
+.fav-io-row { display: flex; gap: 0.4rem; }
+.btn-export-fav { background: var(--ocean-light); flex: 1; }
+.btn-import-fav { background: var(--ocean-mid); border: 1px solid var(--ocean-light); flex: 1; }
+
+/* ============================================================
+   Import Modal
+   ============================================================ */
+#importModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 22, 38, 0.88);
+}
+
+.modal-box {
+  position: relative;
+  background: var(--ocean-mid);
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.modal-box h2  { color: var(--sponge-yellow); margin-bottom: 0.6rem; font-size: 1.1rem; }
+.modal-box p   { color: #cde; margin-bottom: 1rem; font-size: 0.9rem; }
+
+.modal-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
+
+.btn-merge        { background: var(--sponge-blue); }
+.btn-replace      { background: var(--patrick-pink); }
+.btn-cancel-modal { background: var(--ocean-light); }
+
+/* ============================================================
+   Toasts
+   ============================================================ */
+#toastContainer {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.4rem;
+  z-index: 2000;
+  pointer-events: none;
+  min-width: 220px;
+  max-width: 90vw;
+}
+
+.toast {
+  background: var(--seaweed-green);
+  color: white;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: auto;
+  font-size: 0.88rem;
+  animation: toast-in 0.18s ease;
+}
+
+.toast.error { background: var(--patrick-pink); }
+.toast.undo  { background: var(--ocean-light); border: 1px solid var(--sponge-blue); }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.toast-msg  { flex: 1; }
+
+.toast-undo-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: white;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 600px) {
+  main { padding: 0.5rem; gap: 0.5rem; }
+  .app-title { font-size: 1.1rem; }
+  .thumbnail { width: 52px; height: 32px; }
+}
