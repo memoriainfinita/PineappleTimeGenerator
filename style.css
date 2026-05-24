@@ -226,8 +226,15 @@ main {
   line-height: 1.4;
 }
 
-#btnRandom   { background: var(--patrick-pink);     flex-shrink: 0; font-size: 1.1rem; }
-#btnDownload { background: var(--jellyfish-purple); flex-shrink: 0; font-size: 1.1rem; }
+#textRow button {
+  flex-shrink: 0;
+  height: 2.4rem;
+  font-size: 1rem;
+  padding: 0 0.9rem;
+}
+
+#btnRandom   { background: var(--patrick-pink); }
+#btnDownload { background: var(--jellyfish-purple); }
 
 #btnDownload:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -291,8 +298,6 @@ input[type="color"] {
 
 .btn-random-colors {
   background: linear-gradient(135deg, var(--patrick-pink), var(--sponge-blue), var(--seaweed-green));
-  flex-shrink: 0;
-  font-size: 0.85rem;
 }
 
 /* Size section */
