@@ -478,6 +478,7 @@ function init() {
 
   // Drag (temporary — moved inside wireEvents() in Task 9)
   initMouseDrag();
+  initTouchDrag();
 
   // wireEvents() — added in Task 9
 }
@@ -540,4 +541,32 @@ function initMouseDrag() {
     dragging = false;
     _card.style.userSelect = '';
   });
+}
+
+// =============================================================
+// --- Drag (touch) ---
+// =============================================================
+
+function initTouchDrag() {
+  let lastTX, lastTY;
+
+  _card.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    lastTX = e.touches[0].clientX;
+    lastTY = e.touches[0].clientY;
+  }, { passive: true });
+
+  _card.addEventListener('touchmove', e => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault(); // blocks page scroll during drag
+    const rect = _card.getBoundingClientRect();
+    const dx = (e.touches[0].clientX - lastTX) / rect.width  * 100;
+    const dy = (e.touches[0].clientY - lastTY) / rect.height * 100;
+    lastTX = e.touches[0].clientX;
+    lastTY = e.touches[0].clientY;
+    setState({
+      positionX: clamp(state.positionX + dx, 5, 95),
+      positionY: clamp(state.positionY + dy, 5, 95),
+    });
+  }, { passive: false }); // passive:false required for preventDefault
 }
