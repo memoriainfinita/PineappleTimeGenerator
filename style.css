@@ -4,7 +4,7 @@
 :root {
   --sponge-yellow:   #FFD800;
   --sponge-blue:     #0070BB;
-  --ocean-dark:      #0a1626;
+  --ocean-dark:      #06080e;
   --ocean-mid:       #1E2F45;
   --ocean-light:     #2d436c;
   --patrick-pink:    #FF5252;
@@ -291,6 +291,8 @@ input[type="color"] {
 
 .btn-random-colors {
   background: linear-gradient(135deg, var(--patrick-pink), var(--sponge-blue), var(--seaweed-green));
+  flex-shrink: 0;
+  font-size: 0.85rem;
 }
 
 /* Size section */
