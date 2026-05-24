@@ -63,11 +63,13 @@ Key decisions:
 - 2026-05-24 (session 1): Deep v1 cleanup. v2 brainstorm: design approved, spec committed.
 - 2026-05-24 (session 2): 4 rounds of gap analysis on spec. Implementation plan written (14 tasks), revised (12 gaps fixed), obsolete files archived. Plan ready to execute.
 - 2026-05-24 (session 3): Reviewed 3 plan gaps (hidden/CSS specificity, uploadCustomBg mutation undocumented, CLAUDE.md in gitignore). Plan fixed. v2 implementation executed in full (14 tasks, 12 commits). App live on main.
-- 2026-05-24 (session 4): UI tweaks — random colors button moved to text row, page background darkened, buttons unified, position sliders removed (drag replaces them), advanced panel in 4-column grid, UI translated to English.
+- 2026-05-24 (session 4): UI tweaks — random colors button moved to text row, page background darkened, buttons unified, position sliders removed (drag replaces them), advanced panel in 4-column grid, UI translated to English. Drag hint added below card. README and CLAUDE.md cleaned (no slop, factual fixes).
+- 2026-05-24 (session 5): PNG export broken on file:// — root cause not fully diagnosed. Three speculative edits made (useCORS, error handling, crossOrigin in brightness sampler). Export still failing at session close. Needs proper diagnosis before next edit.
 
 ## TODO
 
 - [x] New session: read v2 spec and invoke writing-plans for implementation plan
 - [x] Execute v2 plan — `docs/superpowers/plans/2026-05-24-v2-implementation.md`
 - [ ] Manual end-to-end verification in browser (checklist in CLAUDE.md)
+- [ ] Fix PNG export on file:// — diagnose properly before editing (read exportPNG + _getImageBrightness + v1 diff first, propose before touching)
 - [ ] Decide whether to push to GitHub Pages
