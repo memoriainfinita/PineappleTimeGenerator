@@ -182,6 +182,10 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Enforce [hidden] even when an ID rule sets display:flex/grid.
+   UA stylesheet uses display:none without !important — ID selectors win otherwise. */
+[hidden] { display: none !important; }
+
 body {
   background-color: var(--ocean-dark);
   color: #fff;
@@ -411,7 +415,8 @@ main {
   padding-bottom: 0.5rem;
 }
 
-/* [hidden] attribute takes precedence — no extra CSS needed */
+/* [hidden] works here because the global [hidden] { display: none !important } rule
+   in the Base section overrides all author display rules, including ID selectors. */
 
 .panel-section {
   display: flex;
@@ -1822,6 +1827,9 @@ function uploadCustomBg(file) {
   reader.onload = e => {
     const dataUrl = e.target.result;
 
+    // Direct mutation of state.customBackgrounds is an accepted exception here
+    // (same as in loadFavorite) — setState is called immediately after with the
+    // updated backgroundIndex so render() gets the correct final state.
     if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
       state.customBackgrounds.pop(); // evict oldest
       toast('Fondo más antiguo eliminado para hacer espacio');
