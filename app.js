@@ -392,7 +392,7 @@ async function _getImageBrightness(url) {
 
   return new Promise(resolve => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (location.protocol !== 'file:') img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -945,15 +945,15 @@ function confirmImport(mode) {
 
 function exportPNG() {
   const btn = document.getElementById('btnDownload');
-  btn.disabled     = true;
-  _overlay.hidden  = false;
+  btn.disabled    = true;
+  _overlay.hidden = false;
 
   const filename = `pineapple-time-card-${state.ratio.replace(':', '-')}.png`;
 
   html2canvas(_card, {
     scale:      2,
     useCORS:    true,
-    allowTaint: false,
+    allowTaint: true,
     // downloadOverlay is outside _card (sibling of timeCard inside cardContainer),
     // so it never appears in the capture. onclone is kept as safety net.
     onclone: cloned => {
@@ -961,16 +961,17 @@ function exportPNG() {
       if (ov) ov.remove();
     },
   }).then(canvas => {
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href = url; a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
   }).catch(err => {
     console.error('Export failed:', err);
-    toast('Export error', { type: 'error' });
+    if (location.protocol === 'file:' && err instanceof DOMException && err.name === 'SecurityError') {
+      toast('Export requires Chrome or the online version', { type: 'error' });
+    } else {
+      toast('Export error', { type: 'error' });
+    }
   }).finally(() => {
     btn.disabled    = false;
     _overlay.hidden = true;
