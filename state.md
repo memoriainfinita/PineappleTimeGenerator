@@ -1,3 +1,8 @@
+---
+created: 2026-05-01
+last_updated: 2026-06-16
+---
+
 # Pineapple Time Generator — State
 
 ## System
@@ -66,11 +71,11 @@ Key decisions:
 - 2026-05-24 (session 4): UI tweaks — random colors button moved to text row, page background darkened, buttons unified, position sliders removed (drag replaces them), advanced panel in 4-column grid, UI translated to English. Drag hint added below card. README and CLAUDE.md cleaned (no slop, factual fixes).
 - 2026-05-24 (session 5): PNG export broken on file:// (SecurityError on toBlob). Speculative edits reverted. Needs proper diagnosis before touching.
 - 2026-05-30 (session 6): Diagnosed PNG export bug. Root cause: Firefox assigns opaque unique origin to each file:// URL — canvas always taints, toDataURL/toBlob both fail. No JS-only fix without bundling images as base64. Decision: accept Chrome-only for local file:// export. Graceful error toast in Firefox. Fixed _getImageBrightness crossOrigin noise on file://.
+- 2026-06-16 (session 7): Corrected session 6 conclusion. PNG export of preset backgrounds also fails in Chrome on file:// — reproduced. It is a file:// canvas-tainting limitation in ALL browsers, not Chrome-specific. Export error message rewritten to say so. Verified export works when served over http (python -m http.server). Added "Background ↺" button to text row (random over all backgrounds + autoAdjustColors). Expanded color palettes 5→18 each, rebalanced dark palette for perceptible hue (near-black originals looked identical) and light palette away from near-identical yellows. Removed dead colorBrightness(); updated stale color defaults and palette comment. README: documented server requirement, added Background ↺.
 
 ## TODO
 
 - [x] New session: read v2 spec and invoke writing-plans for implementation plan
 - [x] Execute v2 plan — `docs/superpowers/plans/2026-05-24-v2-implementation.md`
-- [x] Fix PNG export on file:// — diagnosed; Firefox limitation accepted; graceful error shown
+- [x] Fix PNG export on file:// — confirmed file:// limitation in all browsers; export works when served over http; error message and README updated
 - [ ] Manual end-to-end verification in browser (checklist in CLAUDE.md)
-- [ ] Decide whether to push to GitHub Pages

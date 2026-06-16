@@ -244,6 +244,7 @@ main {
 }
 
 #btnRandom   { background: var(--patrick-pink); }
+#btnRandomBg { background: var(--seaweed-green); }
 #btnDownload { background: var(--jellyfish-purple); }
 
 #btnDownload:disabled { opacity: 0.5; cursor: not-allowed; }

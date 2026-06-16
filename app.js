@@ -37,9 +37,15 @@ const backgroundPresets = [
   { url: 'backgrounds/squid-on-strike.png',      label: 'Squid on Strike' },
 ];
 
-// SpongeBob-themed palettes — intentionally limited for visual coherence
-const DARK_PALETTE  = ['#3e1600', '#1a0a00', '#0d1b2a', '#1b2a1b', '#2a0a2a'];
-const LIGHT_PALETTE = ['#ffeb99', '#ffe566', '#fff4cc', '#ffd700', '#fff8e1'];
+// SpongeBob-themed palettes — dark for light backgrounds, light for dark backgrounds
+const DARK_PALETTE  = ['#5c2e0d', '#7a1f1f', '#0d3a5c', '#1f5f2a', '#5a1f6b',
+                       '#0d4d4d', '#6b4a00', '#7a2d4d', '#2a2a6b', '#5c1500',
+                       '#1a4d1a', '#4d0d2a', '#0d2e4d', '#3a1f5c', '#6b2d0d',
+                       '#0d4d3a', '#4d1f1f', '#3a3a0d'];
+const LIGHT_PALETTE = ['#ffe566', '#fff4cc', '#ffd6e0', '#d6f5ff', '#e0ffd6',
+                       '#f0e6ff', '#ffe0b3', '#fff2b3', '#d6ffe9', '#ffffff',
+                       '#ffccdd', '#cce6ff', '#fff0cc', '#e6ffcc', '#ffe6f0',
+                       '#ccfff0', '#f5d6ff', '#ffd9b3'];
 
 // =============================================================
 // --- Utils ---
@@ -51,13 +57,6 @@ function clamp(val, min, max) {
 
 function roundOneDecimal(val) {
   return Math.round(val * 10) / 10;
-}
-
-function colorBrightness(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
 function generateDarkColor() {
@@ -136,8 +135,8 @@ const state = {
   backgroundIndex:   0,
   customBackgrounds: [],   // base64 URLs; max MAX_CUSTOM_BGS
   fontSize:          3,    // em; range [0.5, 8]
-  textColor:         '#3e1600',
-  shadowColor:       '#ffeb99',
+  textColor:         '#5c2e0d',
+  shadowColor:       '#ffe566',
   positionX:         50,   // [5, 95]
   positionY:         50,   // [5, 95]
   textAlign:         'center',
@@ -579,6 +578,16 @@ function wireEvents() {
     setState({ text: _randomPhrase(state.text) });
   });
 
+  document.getElementById('btnRandomBg').addEventListener('click', () => {
+    const all = allBackgrounds();
+    if (all.length <= 1) return;
+    let idx;
+    do { idx = Math.floor(Math.random() * all.length); }
+    while (idx === state.backgroundIndex);
+    setState({ backgroundIndex: idx });
+    autoAdjustColors(all[idx].url);
+  });
+
   document.getElementById('btnDownload').addEventListener('click', exportPNG);
 
   // --- Background strip (event delegation) ---
@@ -968,7 +977,7 @@ function exportPNG() {
   }).catch(err => {
     console.error('Export failed:', err);
     if (location.protocol === 'file:' && err instanceof DOMException && err.name === 'SecurityError') {
-      toast('Export requires Chrome or the online version', { type: 'error' });
+      toast('PNG export blocked on file:// — use the online version or serve the folder locally', { type: 'error' });
     } else {
       toast('Export error', { type: 'error' });
     }

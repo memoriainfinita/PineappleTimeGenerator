@@ -7,18 +7,20 @@ SpongeBob-themed time card generator. Create title cards in the style of the sho
 
 ## Quick Start
 
-**Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PinnapleTimeGenerator/) — no install needed.
+**Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PinnapleTimeGenerator/) — no install needed, ready to use.
 
-**Local:**
+**Local:** the app must be served over http (opening `index.html` directly via `file://` breaks PNG export). Clone and start a simple server:
 ```bash
 git clone https://github.com/memoriainfinita/PinnapleTimeGenerator.git
+cd PinnapleTimeGenerator
+python -m http.server
 ```
-Open `index.html` in a browser. No dependencies to install. Works offline (except the font CDN).
+Then open `http://localhost:8000`.
 
 ## Features
 
 - **Text:** write your own or pick from 35+ iconic phrases with `Phrase ↺`; loads a random one on start
-- **Backgrounds:** 15 SpongeBob episode backgrounds + custom image upload; loads a random one on start
+- **Backgrounds:** 15 SpongeBob episode backgrounds + custom image upload; loads a random one on start, or pick one at random with `Background ↺`
 - **Smart colors:** `Colors ↺` analyzes background brightness and picks readable text/shadow colors
 - **Style:** font size (+/− buttons or slider), text color, shadow color
 - **Positioning:** drag text directly on the card; alignment buttons (L/C/R) and reset
@@ -29,7 +31,7 @@ Open `index.html` in a browser. No dependencies to install. Works offline (excep
 ## How to Use
 
 1. Write your text or click `Phrase ↺` for a random one
-2. Choose a background from the strip or upload your own
+2. Choose a background from the strip, upload your own, or click `Background ↺` for a random one
 3. Click `Colors ↺` to auto-set readable colors, or adjust manually
 4. Drag the text on the card to reposition it
 5. Save as a favorite if you want to reuse this setup
