@@ -50,11 +50,15 @@ This project is dedicated to **[CuriousMarc](https://www.youtube.com/c/Curiousma
 
 ## Development
 
-Built with vibe coding and Claude AI assistance. Three files (`index.html`, `style.css`, `app.js`), no build step.
+Three files (`index.html`, `style.css`, `app.js`), no build step.
 
 ## License
 
 GPL-3.0 — free to use, modify, and distribute. Derivatives must also be GPL-3.0.
+
+## Credits
+
+Developed by [@memoriainfinita](https://github.com/memoriainfinita) with the assistance of Claude (Anthropic): Opus 4.8 and Sonnet 4.6.
 
 ---
 
