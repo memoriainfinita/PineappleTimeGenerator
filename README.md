@@ -5,6 +5,8 @@
 
 SpongeBob-themed time card generator. Create title cards in the style of the show's iconic scene transitions and export them as clean PNGs for video editing.
 
+![Pineapple Time Generator with a card in progress: the phrase over the chosen background, the strip of backgrounds and the controls](docs/PinnapleTimeGenerator-demo.png)
+
 ## Quick Start
 
 **Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PinnapleTimeGenerator/) — no install needed, ready to use.
