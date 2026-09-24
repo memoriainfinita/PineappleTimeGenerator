@@ -1,6 +1,6 @@
 ---
 created: 2026-05-01
-last_updated: 2026-06-16
+last_updated: 2026-09-24
 ---
 
 # Pineapple Time Generator — State
@@ -25,7 +25,8 @@ last_updated: 2026-06-16
 | `LICENSE` | active | GPL-3.0 |
 | `docs/superpowers/specs/2026-05-24-v2-design.md` | active | final spec |
 | `docs/superpowers/plans/2026-05-24-v2-implementation.md` | active | executed plan |
-| `archive/` | active | index-v1.html, original, CLAUDE.md v1, obsolete docs |
+| `README.md` | active | screenshot at `docs/PineappleTimeGenerator-demo.png` |
+| `.archive/` | gitignored | index-v1.html, original, CLAUDE.md v1, obsolete docs |
 
 ## v2 — Architecture
 
@@ -72,6 +73,7 @@ Key decisions:
 - 2026-05-24 (session 5): PNG export broken on file:// (SecurityError on toBlob). Speculative edits reverted. Needs proper diagnosis before touching.
 - 2026-05-30 (session 6): Diagnosed PNG export bug. Root cause: Firefox assigns opaque unique origin to each file:// URL — canvas always taints, toDataURL/toBlob both fail. No JS-only fix without bundling images as base64. Decision: accept Chrome-only for local file:// export. Graceful error toast in Firefox. Fixed _getImageBrightness crossOrigin noise on file://.
 - 2026-06-16 (session 7): Corrected session 6 conclusion. PNG export of preset backgrounds also fails in Chrome on file:// — reproduced. It is a file:// canvas-tainting limitation in ALL browsers, not Chrome-specific. Export error message rewritten to say so. Verified export works when served over http (python -m http.server). Added "Background ↺" button to text row (random over all backgrounds + autoAdjustColors). Expanded color palettes 5→18 each, rebalanced dark palette for perceptible hue (near-black originals looked identical) and light palette away from near-identical yellows. Removed dead colorBrightness(); updated stale color defaults and palette comment. README: documented server requirement, added Background ↺.
+- 2026-09-24: Repo renamed from `PinnapleTimeGenerator` to `PineappleTimeGenerator` (typo). GitHub redirects the repo; the old Pages URL returns 404.
 
 ## TODO
 
