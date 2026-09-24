@@ -61,7 +61,3 @@ GPL-3.0 — free to use, modify, and distribute. Derivatives must also be GPL-3.
 ## Credits
 
 Developed by [@memoriainfinita](https://github.com/memoriainfinita) with the assistance of Claude (Anthropic): Opus 4.8 and Sonnet 4.6.
-
----
-
-Created with ❤️ by [mi](https://github.com/memoriainfinita)
