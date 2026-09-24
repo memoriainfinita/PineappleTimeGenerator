@@ -1,20 +1,20 @@
 # Pineapple Time Generator
 
-[![Live demo](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://memoriainfinita.github.io/PinnapleTimeGenerator/)
+[![Live demo](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://memoriainfinita.github.io/PineappleTimeGenerator/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 SpongeBob-themed time card generator. Create title cards in the style of the show's iconic scene transitions and export them as clean PNGs for video editing.
 
-![Pineapple Time Generator with a card in progress: the phrase over the chosen background, the strip of backgrounds and the controls](docs/PinnapleTimeGenerator-demo.png)
+![Pineapple Time Generator with a card in progress: the phrase over the chosen background, the strip of backgrounds and the controls](docs/PineappleTimeGenerator-demo.png)
 
 ## Quick Start
 
-**Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PinnapleTimeGenerator/) — no install needed, ready to use.
+**Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PineappleTimeGenerator/) — no install needed, ready to use.
 
 **Local:** the app must be served over http (opening `index.html` directly via `file://` breaks PNG export). Clone and start a simple server:
 ```bash
-git clone https://github.com/memoriainfinita/PinnapleTimeGenerator.git
-cd PinnapleTimeGenerator
+git clone https://github.com/memoriainfinita/PineappleTimeGenerator.git
+cd PineappleTimeGenerator
 python -m http.server
 ```
 Then open `http://localhost:8000`.

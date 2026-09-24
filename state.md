@@ -7,8 +7,8 @@ last_updated: 2026-06-16
 
 ## System
 
-- Repo: https://github.com/memoriainfinita/PinnapleTimeGenerator
-- Live demo: https://memoriainfinita.github.io/PinnapleTimeGenerator/
+- Repo: https://github.com/memoriainfinita/PineappleTimeGenerator
+- Live demo: https://memoriainfinita.github.io/PineappleTimeGenerator/
 - Stack v2: index.html + style.css + app.js, no build step
 - Storage: LocalStorage for favorites
 
