@@ -19,6 +19,8 @@ python -m http.server
 ```
 Then open `http://localhost:8000`.
 
+**Guide:** [how to make a card](docs/guide/README.md)
+
 ## Features
 
 - **Text:** write your own or pick from 35+ iconic phrases with `Phrase ↺`; loads a random one on start
