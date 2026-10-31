@@ -19,23 +19,28 @@ const phrases = [
   'One Minute, Thirty Seven Seconds Later',
 ];
 
+// thumb: small WebP shown in the strip; url: full image used on the card and in the export
 const backgroundPresets = [
-  { url: 'backgrounds/band-geeks.jpg',          label: 'Band Geeks' },
-  { url: 'backgrounds/club-spongebob.jpg',       label: 'Club SpongeBob' },
-  { url: 'backgrounds/frankendoodle.jpg',        label: 'Frankendoodle' },
-  { url: 'backgrounds/fry-cook-games.jpg',       label: 'Fry Cook Games' },
-  { url: 'backgrounds/gary-bath.jpg',            label: 'Gary Takes a Bath' },
-  { url: 'backgrounds/graveyard-shift.jpg',      label: 'Graveyard Shift' },
-  { url: 'backgrounds/im-with-stupid.jpg',       label: "I'm with Stupid" },
-  { url: 'backgrounds/jellyfish-hunter.jpg',     label: 'Jellyfish Hunter' },
-  { url: 'backgrounds/krusty-love.png',          label: 'Krusty Love' },
-  { url: 'backgrounds/pressure.jpg',             label: 'Pressure' },
-  { url: 'backgrounds/procrastination.jpg',      label: 'Procrastination' },
-  { url: 'backgrounds/sandy-worm.jpg',           label: 'Sandy, SpongeBob & the Worm' },
-  { url: 'backgrounds/shanghaied.jpg',           label: 'Shanghaied' },
-  { url: 'backgrounds/spongeguard-on-duty.png',  label: 'SpongeGuard on Duty' },
-  { url: 'backgrounds/squid-on-strike.png',      label: 'Squid on Strike' },
-];
+  ['band-geeks.jpg',         'Band Geeks'],
+  ['club-spongebob.jpg',     'Club SpongeBob'],
+  ['frankendoodle.jpg',      'Frankendoodle'],
+  ['fry-cook-games.jpg',     'Fry Cook Games'],
+  ['gary-bath.jpg',          'Gary Takes a Bath'],
+  ['graveyard-shift.jpg',    'Graveyard Shift'],
+  ['im-with-stupid.jpg',     "I'm with Stupid"],
+  ['jellyfish-hunter.jpg',   'Jellyfish Hunter'],
+  ['krusty-love.png',        'Krusty Love'],
+  ['pressure.jpg',           'Pressure'],
+  ['procrastination.jpg',    'Procrastination'],
+  ['sandy-worm.jpg',         'Sandy, SpongeBob & the Worm'],
+  ['shanghaied.jpg',         'Shanghaied'],
+  ['spongeguard-on-duty.png','SpongeGuard on Duty'],
+  ['squid-on-strike.png',    'Squid on Strike'],
+].map(([file, label]) => ({
+  url:   `backgrounds/${file}`,
+  thumb: `backgrounds/thumbs/${file.replace(/\.\w+$/, '.webp')}`,
+  label,
+}));
 
 // SpongeBob-themed palettes — dark for light backgrounds, light for dark backgrounds
 const DARK_PALETTE  = ['#5c2e0d', '#7a1f1f', '#0d3a5c', '#1f5f2a', '#5a1f6b',
@@ -46,6 +51,50 @@ const LIGHT_PALETTE = ['#ffe566', '#fff4cc', '#ffd6e0', '#d6f5ff', '#e0ffd6',
                        '#f0e6ff', '#ffe0b3', '#fff2b3', '#d6ffe9', '#ffffff',
                        '#ffccdd', '#cce6ff', '#fff0cc', '#e6ffcc', '#ffe6f0',
                        '#ccfff0', '#f5d6ff', '#ffd9b3'];
+
+// Card geometry. The card is a container (see style.css): text sizes are
+// expressed relative to its width, so the same card looks the same at any
+// screen size and in the export. 1em of the old fixed layout = 16px of a
+// 900px card.
+const RATIOS = {
+  '16:9': { w: 16, h: 9,  out: [1920, 1080] },
+  '4:3':  { w: 4,  h: 3,  out: [1440, 1080] },
+  '9:16': { w: 9,  h: 16, out: [1080, 1920] },
+  '1:1':  { w: 1,  h: 1,  out: [1080, 1080] },
+};
+const RATIO_KEYS  = Object.keys(RATIOS);
+const ALIGNS      = ['left', 'center', 'right'];
+const EFFECTS     = ['shadow', 'outline'];
+const EM_CQW      = 16 / 900 * 100;   // 1em of text size, in % of card width
+const SHADOW_CQW  = 2 / 900 * 100;    // shadow offset, in % of card width
+const OUTLINE_CQW = 4 / 900 * 100;    // outline stroke width, in % of card width
+const LINE_HEIGHT = 1.2;
+const TEXT_BOX    = 0.9;              // text box width, fraction of card width
+const FONT_MIN    = 0.5;
+const FONT_MAX    = 8;
+const POS_MIN     = 5;
+const POS_MAX     = 95;
+const FONT_FAMILY = '"Some Time Later", sans-serif';
+
+const STYLE_DEFAULTS = {
+  fontSize:    3,
+  textColor:   '#5c2e0d',
+  shadowColor: '#ffe566',
+  positionX:   50,
+  positionY:   50,
+  textAlign:   'center',
+  ratio:       '16:9',
+  effect:      'shadow',
+};
+
+const MIN_CONTRAST     = 4.5;   // WCAG AA for normal text
+const MIN_SHADOW_CONTRAST = 3;
+const LUM_SPLIT        = 0.179; // luminance where white and black text contrast equally
+const DEFAULT_LUM      = 0.2;   // used when the image can't be sampled (file://)
+const LUM_GRID         = 48;
+
+const MAX_UPLOAD_SIDE = 1920;
+const UPLOAD_QUALITY  = 0.82;
 
 // =============================================================
 // --- Utils ---
@@ -59,12 +108,220 @@ function roundOneDecimal(val) {
   return Math.round(val * 10) / 10;
 }
 
-function generateDarkColor() {
-  return DARK_PALETTE[Math.floor(Math.random() * DARK_PALETTE.length)];
+function randomItem(list) {
+  return list[Math.floor(Math.random() * list.length)];
 }
 
-function generateLightColor() {
-  return LIGHT_PALETTE[Math.floor(Math.random() * LIGHT_PALETTE.length)];
+function generateDarkColor()  { return randomItem(DARK_PALETTE); }
+function generateLightColor() { return randomItem(LIGHT_PALETTE); }
+
+// --- Color math (WCAG relative luminance) ---
+
+const _srgbLut = Array.from({ length: 256 }, (_, i) => {
+  const c = i / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+});
+
+function relativeLuminance(r, g, b) {
+  return 0.2126 * _srgbLut[r] + 0.7152 * _srgbLut[g] + 0.0722 * _srgbLut[b];
+}
+
+function hexLuminance(hex) {
+  return relativeLuminance(
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  );
+}
+
+function contrastRatio(lumA, lumB) {
+  const hi = Math.max(lumA, lumB);
+  const lo = Math.min(lumA, lumB);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// Picks a text color readable over a background of the given luminance and a
+// shadow color that stands out from the text. Prefers the palette family that
+// suits the background (light text on dark, dark on light); when no color of
+// that family reaches MIN_CONTRAST it looks in the other one, and as a last
+// resort takes the best contrast available.
+function pickColors(bgLum) {
+  const families = bgLum < LUM_SPLIT
+    ? [LIGHT_PALETTE, DARK_PALETTE]
+    : [DARK_PALETTE, LIGHT_PALETTE];
+  const readable = c => contrastRatio(hexLuminance(c), bgLum) >= MIN_CONTRAST;
+
+  const family = families.find(f => f.some(readable));
+  let textColor;
+  if (family) {
+    textColor = randomItem(family.filter(readable));
+  } else {
+    const all = [...LIGHT_PALETTE, ...DARK_PALETTE];
+    textColor = all.reduce((best, c) =>
+      contrastRatio(hexLuminance(c), bgLum) > contrastRatio(hexLuminance(best), bgLum) ? c : best);
+  }
+
+  const textLum    = hexLuminance(textColor);
+  const shadowPool = LIGHT_PALETTE.includes(textColor) ? DARK_PALETTE : LIGHT_PALETTE;
+  const standout   = shadowPool.filter(c => contrastRatio(hexLuminance(c), textLum) >= MIN_SHADOW_CONTRAST);
+  return { textColor, shadowColor: randomItem(standout.length ? standout : shadowPool) };
+}
+
+// --- Image sampling ---
+
+// Maps a point of the card (0..1) to the image (0..1) for `background-size: cover`
+// centered, given both aspect ratios (width / height).
+function coverToImage(u, v, imgAspect, cardAspect) {
+  if (imgAspect > cardAspect) {
+    const visible = cardAspect / imgAspect;
+    return [(1 - visible) / 2 + u * visible, v];
+  }
+  const visible = imgAspect / cardAspect;
+  return [u, (1 - visible) / 2 + v * visible];
+}
+
+// Mean luminance of a card region {x0,y0,x1,y1} (0..1) over a luminance map.
+function regionLuminance(map, region, cardAspect) {
+  const [ix0, iy0] = coverToImage(clamp(region.x0, 0, 1), clamp(region.y0, 0, 1), map.aspect, cardAspect);
+  const [ix1, iy1] = coverToImage(clamp(region.x1, 0, 1), clamp(region.y1, 0, 1), map.aspect, cardAspect);
+  const c0 = clamp(Math.floor(ix0 * LUM_GRID), 0, LUM_GRID - 1);
+  const c1 = clamp(Math.ceil(ix1 * LUM_GRID) - 1, c0, LUM_GRID - 1);
+  const r0 = clamp(Math.floor(iy0 * LUM_GRID), 0, LUM_GRID - 1);
+  const r1 = clamp(Math.ceil(iy1 * LUM_GRID) - 1, r0, LUM_GRID - 1);
+  let total = 0, n = 0;
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      total += map.cells[r * LUM_GRID + c];
+      n++;
+    }
+  }
+  return total / n;
+}
+
+// Largest rectangle that covers W×H with an image of iw×ih, centered.
+function coverRect(iw, ih, W, H) {
+  const s = Math.max(W / iw, H / ih);
+  const w = iw * s;
+  const h = ih * s;
+  return [(W - w) / 2, (H - h) / 2, w, h];
+}
+
+// --- Text layout (shared by the export; mirrors white-space: pre-wrap + break-word) ---
+
+function wrapText(text, maxWidth, measure) {
+  const lines = [];
+  for (const para of String(text).split('\n')) {
+    let line = '';
+    for (const word of para.split(' ')) {
+      const candidate = line === '' ? word : `${line} ${word}`;
+      if (measure(candidate) <= maxWidth) { line = candidate; continue; }
+      if (line !== '') { lines.push(line); line = ''; }
+      if (measure(word) <= maxWidth) { line = word; continue; }
+      for (const ch of word) {           // word wider than the box: break it
+        if (line === '' || measure(line + ch) <= maxWidth) line += ch;
+        else { lines.push(line); line = ch; }
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+// --- Hash (cyrb53) — short stable id for background data URLs ---
+
+function hashString(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+// --- Sanitizers (localStorage and imported files are untrusted input) ---
+
+const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+function isDataImage(url) {
+  return typeof url === 'string' && url.startsWith('data:image/');
+}
+
+// Returns only the style fields of `o` that are valid.
+function normalizeStyle(o) {
+  const s = {};
+  if (Number.isFinite(o.fontSize))      s.fontSize    = clamp(roundOneDecimal(o.fontSize), FONT_MIN, FONT_MAX);
+  if (HEX_RE.test(o.textColor))         s.textColor   = o.textColor;
+  if (HEX_RE.test(o.shadowColor))       s.shadowColor = o.shadowColor;
+  if (Number.isFinite(o.positionX))     s.positionX   = clamp(o.positionX, POS_MIN, POS_MAX);
+  if (Number.isFinite(o.positionY))     s.positionY   = clamp(o.positionY, POS_MIN, POS_MAX);
+  if (ALIGNS.includes(o.textAlign))     s.textAlign   = o.textAlign;
+  if (RATIO_KEYS.includes(o.ratio))     s.ratio       = o.ratio;
+  if (EFFECTS.includes(o.effect))       s.effect      = o.effect;
+  return s;
+}
+
+function sanitizeUI(raw) {
+  const o  = raw && typeof raw === 'object' ? raw : {};
+  const ui = normalizeStyle(o);
+  delete ui.textColor;   // colors are recomputed on every load
+  delete ui.shadowColor;
+  if (typeof o.advancedOpen === 'boolean')      ui.advancedOpen      = o.advancedOpen;
+  if (typeof o.transparentExport === 'boolean') ui.transparentExport = o.transparentExport;
+  return ui;
+}
+
+// Returns a clean favorite, or null when it can't be one (no usable id or name).
+// `backgroundUrl` is kept only if it is '', a preset, a data:image URL or a
+// `custom:<hash>` reference.
+function sanitizeFavorite(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const id   = Number(raw.id);
+  const name = typeof raw.name === 'string' ? raw.name.trim().slice(0, 80) : '';
+  if (!Number.isFinite(id) || !name) return null;
+
+  const url = typeof raw.backgroundUrl === 'string' ? raw.backgroundUrl : '';
+  const knownUrl = url === '' || isDataImage(url) || /^custom:[0-9a-z]+$/.test(url) ||
+                   backgroundPresets.some(p => p.url === url);
+  return {
+    id,
+    name,
+    text: typeof raw.text === 'string' ? raw.text.slice(0, 500) : '',
+    backgroundUrl: knownUrl ? url : '',
+    ...STYLE_DEFAULTS,
+    ...normalizeStyle(raw),
+  };
+}
+
+// Sanitizes a favorite and moves an inline data URL background out of it into
+// `bgSink` (hash -> data URL), leaving a `custom:<hash>` reference. A reference
+// whose data is in neither `bgSink` nor `incoming` is dropped.
+function ingestFavorite(raw, incoming, bgSink) {
+  const fav = sanitizeFavorite(raw);
+  if (!fav) return null;
+
+  if (isDataImage(fav.backgroundUrl)) {
+    const hash = hashString(fav.backgroundUrl);
+    bgSink[hash] = fav.backgroundUrl;
+    fav.backgroundUrl = `custom:${hash}`;
+  } else if (fav.backgroundUrl.startsWith('custom:')) {
+    const hash = fav.backgroundUrl.slice(7);
+    if (!bgSink[hash] && isDataImage(incoming[hash])) bgSink[hash] = incoming[hash];
+    if (!bgSink[hash]) fav.backgroundUrl = '';
+  }
+  return fav;
+}
+
+function sanitizeBgMap(raw) {
+  const out = {};
+  if (raw && typeof raw === 'object') {
+    for (const [hash, url] of Object.entries(raw)) {
+      if (/^[0-9a-z]+$/.test(hash) && isDataImage(url)) out[hash] = url;
+    }
+  }
+  return out;
 }
 
 // --- Toast ---
@@ -104,6 +361,7 @@ function toast(message, { type = 'default', undoCallback = null } = {}) {
 function _buildToast(message, cssClass, undoCallback) {
   const t = document.createElement('div');
   t.className = 'toast' + (cssClass ? ' ' + cssClass : '');
+  if (cssClass === 'error') t.setAttribute('role', 'alert');
 
   const msg = document.createElement('span');
   msg.className = 'toast-msg';
@@ -126,35 +384,40 @@ function _buildToast(message, cssClass, undoCallback) {
 // =============================================================
 
 const LS_FAVORITES   = 'pineapple_v2_favorites';
+const LS_FAV_BGS     = 'pineapple_v2_fav_bgs';
 const LS_CUSTOM_BGS  = 'pineapple_v2_custom_bgs';
 const LS_UI          = 'pineapple_v2_ui';
 const MAX_CUSTOM_BGS = 5;
 
 const state = {
+  ...STYLE_DEFAULTS,
   text:              '',
   backgroundIndex:   0,
-  customBackgrounds: [],   // base64 URLs; max MAX_CUSTOM_BGS
-  fontSize:          3,    // em; range [0.5, 8]
-  textColor:         '#5c2e0d',
-  shadowColor:       '#ffe566',
-  positionX:         50,   // [5, 95]
-  positionY:         50,   // [5, 95]
-  textAlign:         'center',
-  ratio:             '16:9',
+  customBackgrounds: [],   // data URLs, newest first; max MAX_CUSTOM_BGS
   advancedOpen:      false,
+  transparentExport: false,
 };
+
+// Keys of `state` remembered between visits (see persistUI)
+const UI_KEYS = ['advancedOpen', 'fontSize', 'textAlign', 'ratio',
+                 'positionX', 'positionY', 'effect', 'transparentExport'];
 
 // Favorites are NOT in state — managed separately to avoid
 // rebuilding the favorites list on every keystroke.
 let favorites = [];
+// Backgrounds referenced by favorites as `custom:<hash>`: hash -> data URL.
+// Kept apart so a background shared by several favorites is stored once.
+let favBgs = {};
 
 // --- setState ---
 // Rule: ALL event handlers and async callbacks mutate state through setState().
-// Exception: init() mutates state directly and calls render() once.
+// Exceptions: init(), and addCustomBg/removeCustomBg, which edit
+// state.customBackgrounds and are always followed by a setState().
 
 function setState(patch) {
   Object.assign(state, patch);
   render();
+  if (UI_KEYS.some(k => k in patch)) schedulePersistUI();
 }
 
 // --- allBackgrounds ---
@@ -163,6 +426,7 @@ function allBackgrounds() {
   return [
     ...state.customBackgrounds.map((url, i) => ({
       url,
+      thumb: url,
       isCustom: true,
       label: `Custom background ${i + 1}`,
     })),
@@ -175,10 +439,10 @@ function allBackgrounds() {
 function saveToLS(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    if (e.name === 'QuotaExceededError') {
-      toast('Storage full', { type: 'error' });
-    }
+    return true;
+  } catch (_) {
+    toast('Could not save: browser storage is full or blocked', { type: 'error' });
+    return false;
   }
 }
 
@@ -192,20 +456,53 @@ function loadFromLS(key, fallback) {
   }
 }
 
+// --- Persistence helpers ---
+// Call these explicitly after mutations that need to be saved.
+// setState only persists the UI keys, debounced.
+
+let _uiTimer = null;
+
+function persistUI() {
+  clearTimeout(_uiTimer);
+  _uiTimer = null;
+  saveToLS(LS_UI, Object.fromEntries(UI_KEYS.map(k => [k, state[k]])));
+}
+
+function schedulePersistUI() {
+  clearTimeout(_uiTimer);
+  _uiTimer = setTimeout(persistUI, 300);
+}
+
+function persistCustomBgs() { saveToLS(LS_CUSTOM_BGS, state.customBackgrounds); }
+function persistFavorites() { saveToLS(LS_FAVORITES, favorites); }
+function persistFavBgs()    { saveToLS(LS_FAV_BGS, favBgs); }
+
 // =============================================================
 // --- Render ---
 // =============================================================
 
 // DOM refs — populated in init() after DOMContentLoaded
-let _card, _strip, _overlay, _textarea;
+let _card, _strip, _textarea;
+
+let _renderedBg = null;
 
 function renderCard() {
   const bgs = allBackgrounds();
   const bg  = bgs[state.backgroundIndex] || bgs[0];
 
-  _card.style.backgroundImage = `url('${bg.url}')`;
-  // Use classList.toggle to avoid clobbering other potential classes
-  _card.classList.toggle('ratio-4-3', state.ratio === '4:3');
+  // Assigning a large data URL again on every drag step makes the browser re-parse it
+  if (bg.url !== _renderedBg) {
+    _renderedBg = bg.url;
+    _card.style.backgroundImage = `url('${bg.url}')`;
+  }
+
+  const ratio = RATIOS[state.ratio];
+  _card.style.setProperty('--ar', `${ratio.w} / ${ratio.h}`);
+  _card.style.setProperty('--ar-n', ratio.w / ratio.h);
+  _card.style.setProperty('--fs', state.fontSize);
+  _card.style.setProperty('--text-color', state.textColor);
+  _card.style.setProperty('--shadow-color', state.shadowColor);
+  _card.classList.toggle('fx-outline', state.effect === 'outline');
 
   // Text wrapper — update in place, never replace the element
   let wrapper = _card.querySelector('.text-wrapper');
@@ -218,29 +515,29 @@ function renderCard() {
   wrapper.textContent = state.text || '';
   wrapper.style.left      = `${state.positionX}%`;
   wrapper.style.top       = `${state.positionY}%`;
-  wrapper.style.fontSize  = `${state.fontSize}em`;
   wrapper.style.textAlign = state.textAlign;
-
-  _card.style.color      = state.textColor;
-  _card.style.textShadow =
-    `2px 2px 0 ${state.shadowColor}, -2px -2px 0 ${state.shadowColor}`;
 }
 
-// Strip dirty-check — avoids rebuilding on text/color/position changes
-const _stripPrev = { customLength: -1, backgroundIndex: -1 };
+// Strip dirty-check — avoids rebuilding on text/color/position changes.
+// Anything that edits customBackgrounds must call invalidateStrip().
+const _stripPrev = { version: -1, backgroundIndex: -1 };
+let _stripVersion = 0;
+
+function invalidateStrip() { _stripVersion++; }
 
 function renderStrip() {
-  const changed =
-    state.customBackgrounds.length !== _stripPrev.customLength ||
-    state.backgroundIndex          !== _stripPrev.backgroundIndex;
+  if (_stripVersion === _stripPrev.version &&
+      state.backgroundIndex === _stripPrev.backgroundIndex) return;
 
-  if (!changed) return;
-
-  _stripPrev.customLength    = state.customBackgrounds.length;
+  _stripPrev.version         = _stripVersion;
   _stripPrev.backgroundIndex = state.backgroundIndex;
 
   const bgs       = allBackgrounds();
   const uploadBtn = document.getElementById('btnBgUpload');
+
+  // Keep keyboard focus on the same thumbnail across the rebuild
+  const focusedIdx = _strip.contains(document.activeElement)
+    ? document.activeElement.dataset.index : undefined;
 
   // Remove existing thumbnails and separators; keep the upload button
   _strip.querySelectorAll('.thumbnail-wrapper, .strip-separator').forEach(el => el.remove());
@@ -258,16 +555,19 @@ function renderStrip() {
     const wrapper = document.createElement('div');
     wrapper.className = 'thumbnail-wrapper';
 
-    const thumb = document.createElement('div');
+    const thumb = document.createElement('button');
+    thumb.type = 'button';
     thumb.className = 'thumbnail' + (i === state.backgroundIndex ? ' active' : '');
-    thumb.style.backgroundImage = `url('${bg.url}')`;
+    thumb.style.backgroundImage = `url('${bg.thumb}')`;
     thumb.setAttribute('aria-label', bg.label);
+    thumb.setAttribute('aria-pressed', i === state.backgroundIndex);
     thumb.setAttribute('title', bg.label);
     thumb.dataset.index = i;
     wrapper.appendChild(thumb);
 
     if (bg.isCustom) {
       const rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
       rmBtn.className = 'btn-remove-bg';
       rmBtn.textContent = '✕';
       rmBtn.setAttribute('aria-label', `Remove ${bg.label}`);
@@ -278,6 +578,10 @@ function renderStrip() {
     _strip.insertBefore(wrapper, uploadBtn);
   });
 
+  if (focusedIdx !== undefined) {
+    _strip.querySelector(`.thumbnail[data-index="${focusedIdx}"]`)?.focus({ preventScroll: true });
+  }
+
   // Scroll active thumbnail into view after rebuild
   const activeThumb = _strip.querySelector('.thumbnail.active');
   if (activeThumb) {
@@ -285,18 +589,22 @@ function renderStrip() {
   }
 }
 
-// Favorites list dirty-check — avoids rebuilding on every keypress
-const _favPrev = { count: -1, ids: '' };
+// Favorites list dirty-check — avoids rebuilding on every keypress.
+// Favorites are immutable once saved, so the ids identify the list.
+const _favPrev = { ids: null };
+
+function refreshFavorites() {
+  _favPrev.ids = null;
+  renderFavoritesList();
+}
 
 function renderFavoritesList() {
   const list = document.getElementById('favoritesList');
   if (!list) return;
 
-  // Cheap dirty-check: compare count + concatenated ids
   const currentIds = favorites.map(f => f.id).join(',');
-  if (favorites.length === _favPrev.count && currentIds === _favPrev.ids) return;
-  _favPrev.count = favorites.length;
-  _favPrev.ids   = currentIds;
+  if (currentIds === _favPrev.ids) return;
+  _favPrev.ids = currentIds;
 
   list.innerHTML = '';
 
@@ -323,12 +631,14 @@ function renderFavoritesList() {
 
     const loadBtn = document.createElement('button');
     loadBtn.className = 'btn-load-fav';
-    loadBtn.textContent = 'Cargar';
+    loadBtn.textContent = 'Load';
+    loadBtn.setAttribute('aria-label', `Load ${fav.name}`);
     loadBtn.dataset.id = fav.id;
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn-delete-fav';
     delBtn.textContent = '✕';
+    delBtn.setAttribute('aria-label', `Delete ${fav.name}`);
     delBtn.dataset.id = fav.id;
 
     actions.appendChild(loadBtn);
@@ -346,10 +656,18 @@ function renderControls() {
   if (slider)  slider.value = state.fontSize;
   if (display) display.textContent = `${state.fontSize.toFixed(1)}em`;
 
-  // Align buttons
-  document.querySelectorAll('.btn-align').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.align === state.textAlign);
-  });
+  // Segmented buttons: align, ratio, effect
+  for (const [selector, attr, value] of [
+    ['.btn-seg[data-align]',  'align',  state.textAlign],
+    ['.btn-seg[data-ratio]',  'ratio',  state.ratio],
+    ['.btn-seg[data-effect]', 'effect', state.effect],
+  ]) {
+    document.querySelectorAll(selector).forEach(btn => {
+      const on = btn.dataset[attr] === value;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on);
+    });
+  }
 
   // Color pickers
   const colorText   = document.getElementById('colorText');
@@ -357,14 +675,14 @@ function renderControls() {
   if (colorText)   colorText.value   = state.textColor;
   if (colorShadow) colorShadow.value = state.shadowColor;
 
-  // Ratio button label
-  const btnRatio = document.getElementById('btnRatio');
-  if (btnRatio) btnRatio.textContent =
-    state.ratio === '16:9' ? '16:9 → 4:3' : '4:3 → 16:9';
+  const chkTransparent = document.getElementById('chkTransparent');
+  if (chkTransparent) chkTransparent.checked = state.transparentExport;
 
   // Advanced panel visibility
   const panel = document.getElementById('advancedPanel');
   if (panel) panel.hidden = !state.advancedOpen;
+  document.getElementById('btnToggleAdvanced')
+    ?.setAttribute('aria-expanded', state.advancedOpen);
 
   // Textarea — skip if focused to prevent cursor jump while typing
   if (_textarea && document.activeElement !== _textarea) {
@@ -384,58 +702,77 @@ function render() {
 // --- Color System ---
 // =============================================================
 
-const _brightnessCache = new Map(); // url -> brightness
-
-async function _getImageBrightness(url) {
-  if (_brightnessCache.has(url)) return _brightnessCache.get(url);
-
-  return new Promise(resolve => {
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
     const img = new Image();
+    // Without crossOrigin the canvas is tainted; on file:// it would fail anyway
     if (location.protocol !== 'file:') img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width  = 100;
-        canvas.height = 100;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 100, 100);
-        const data = ctx.getImageData(0, 0, 100, 100).data;
-        let total = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          total += 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-        }
-        const brightness = total / (100 * 100);
-        _brightnessCache.set(url, brightness);
-        resolve(brightness);
-      } catch (_) {
-        _brightnessCache.set(url, 128); // CORS/taint fallback
-        resolve(128);
-      }
-    };
-    img.onerror = () => { _brightnessCache.set(url, 128); resolve(128); };
+    img.onload  = () => resolve(img);
+    img.onerror = () => reject(new Error(`Could not load image: ${url.slice(0, 80)}`));
     img.src = url;
   });
 }
 
+// Per-image grid of relative luminance, sampled once. null when the image
+// can't be read (tainted canvas on file://, load error).
+const _lumCache = new Map();
+
+async function getLumMap(url) {
+  if (_lumCache.has(url)) return _lumCache.get(url);
+
+  let map = null;
+  try {
+    const img    = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = LUM_GRID;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, LUM_GRID, LUM_GRID);
+    const data  = ctx.getImageData(0, 0, LUM_GRID, LUM_GRID).data;
+    const cells = new Float32Array(LUM_GRID * LUM_GRID);
+    for (let i = 0; i < cells.length; i++) {
+      cells[i] = relativeLuminance(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+    }
+    map = { aspect: img.naturalWidth / img.naturalHeight, cells };
+  } catch (_) { /* tainted canvas or load error: leave null */ }
+
+  _lumCache.set(url, map);
+  return map;
+}
+
+// Card region (0..1) the text currently covers, estimated from its size and position.
+function textRegion() {
+  const aspect = RATIOS[state.ratio].w / RATIOS[state.ratio].h;
+  const lines  = (state.text || ' ').split('\n');
+  const longest = Math.max(...lines.map(l => l.length), 1);
+  const em     = state.fontSize * EM_CQW / 100;          // fraction of card width
+  const w = Math.min(TEXT_BOX, longest * 0.55 * em);
+  const h = lines.length * LINE_HEIGHT * em * aspect;    // fraction of card height
+  const cx = state.positionX / 100;
+  const cy = state.positionY / 100;
+  return { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
+}
+
+function textBackdropLuminance(map) {
+  if (!map) return DEFAULT_LUM;
+  const aspect = RATIOS[state.ratio].w / RATIOS[state.ratio].h;
+  return regionLuminance(map, textRegion(), aspect);
+}
+
 async function autoAdjustColors(url) {
-  const brightness = await _getImageBrightness(url);
+  const map = await getLumMap(url);
 
   // Race condition guard: discard if user changed background while loading
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (!currentBg || currentBg.url !== url) return;
 
-  const textColor   = brightness < 128 ? generateLightColor() : generateDarkColor();
-  const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
-  setState({ textColor, shadowColor });
+  setState(pickColors(textBackdropLuminance(map)));
 }
 
 function randomColorsForCurrentBg() {
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (!currentBg) return;
-  const brightness = _brightnessCache.get(currentBg.url) ?? 128;
-  const textColor   = brightness < 128 ? generateLightColor() : generateDarkColor();
-  const shadowColor = brightness < 128 ? generateDarkColor()  : generateLightColor();
-  setState({ textColor, shadowColor });
+  setState(pickColors(textBackdropLuminance(_lumCache.get(currentBg.url))));
 }
 
 // =============================================================
@@ -446,118 +783,108 @@ function init() {
   // DOM refs
   _card     = document.getElementById('timeCard');
   _strip    = document.getElementById('bgStrip');
-  _overlay  = document.getElementById('downloadOverlay');
   _textarea = document.getElementById('textInput');
 
-  // Load all persisted data (each read is individually try/catch via loadFromLS)
-  const savedUI     = loadFromLS(LS_UI, {});
+  // Load all persisted data. Everything read back is sanitized: storage can
+  // hold data from older versions or edited by hand.
+  const savedUI     = sanitizeUI(loadFromLS(LS_UI, {}));
   const savedCustom = loadFromLS(LS_CUSTOM_BGS, []);
-  favorites         = loadFromLS(LS_FAVORITES, []);
+  const customBackgrounds = (Array.isArray(savedCustom) ? savedCustom : [])
+    .filter(isDataImage).slice(0, MAX_CUSTOM_BGS);
 
-  // Compute all init values upfront
-  const customBackgrounds = Array.isArray(savedCustom) ? savedCustom : [];
-  const advancedOpen      = savedUI.advancedOpen ?? false;
-  const text              = _randomPhrase('');
-  const totalBgs          = customBackgrounds.length + backgroundPresets.length;
-  const backgroundIndex   = Math.floor(Math.random() * totalBgs);
+  favBgs = sanitizeBgMap(loadFromLS(LS_FAV_BGS, {}));
+  loadStoredFavorites();
 
-  // Single batch mutation — one render() at the end (spec requirement)
-  Object.assign(state, { customBackgrounds, advancedOpen, text, backgroundIndex });
+  const text            = randomPhrase();
+  const totalBgs        = customBackgrounds.length + backgroundPresets.length;
+  const backgroundIndex = Math.floor(Math.random() * totalBgs);
+
+  // Single batch mutation — one render() at the end
+  Object.assign(state, savedUI, { customBackgrounds, text, backgroundIndex });
   render();
 
-  // Async color update — fires setState when image brightness resolves
+  // Async color update — fires setState when image luminance resolves
   const currentBg = allBackgrounds()[state.backgroundIndex];
   if (currentBg) autoAdjustColors(currentBg.url);
 
   wireEvents();
 }
 
-function _randomPhrase(current) {
-  const pool = phrases.filter(p => p !== current);
-  return pool[Math.floor(Math.random() * pool.length)];
+// Reads favorites from storage, upgrading older formats (inline backgrounds ->
+// `custom:` references) and dropping entries that can't be repaired.
+function loadStoredFavorites() {
+  const raw = loadFromLS(LS_FAVORITES, []);
+  const list = Array.isArray(raw) ? raw : [];
+
+  const seen = new Set();
+  favorites = list
+    .map(f => ingestFavorite(f, {}, favBgs))
+    .filter(f => f && !seen.has(f.id) && seen.add(f.id));
+
+  // Drop stored backgrounds no favorite refers to
+  const used = new Set(favorites.map(f => f.backgroundUrl.slice(7)));
+  for (const hash of Object.keys(favBgs)) if (!used.has(hash)) delete favBgs[hash];
+
+  if (JSON.stringify(favorites) !== JSON.stringify(list)) {
+    persistFavBgs();
+    persistFavorites();
+  }
 }
 
-document.addEventListener('DOMContentLoaded', init);
-
-// --- Persistence helpers ---
-// Call these explicitly after mutations that need to be saved.
-// NOT called automatically in setState — only persists what changed.
-
-function persistUI() {
-  saveToLS(LS_UI, { advancedOpen: state.advancedOpen });
+function randomPhrase(current = '') {
+  return randomItem(phrases.filter(p => p !== current));
 }
 
-function persistCustomBgs() {
-  saveToLS(LS_CUSTOM_BGS, state.customBackgrounds);
-}
-
-function persistFavorites() {
-  saveToLS(LS_FAVORITES, favorites);
+// Registered only on the app page, so tests can load this file on their own.
+if (document.getElementById('timeCard')) {
+  document.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('pagehide', () => { if (_uiTimer !== null) persistUI(); });
 }
 
 // =============================================================
-// --- Drag (mouse) ---
+// --- Drag (mouse, touch and pen) + keyboard ---
 // =============================================================
 
-function initMouseDrag() {
-  let dragging = false;
-  let lastX, lastY;
+function moveText(dxPct, dyPct) {
+  setState({
+    positionX: clamp(state.positionX + dxPct, POS_MIN, POS_MAX),
+    positionY: clamp(state.positionY + dyPct, POS_MIN, POS_MAX),
+  });
+}
 
-  _card.addEventListener('mousedown', e => {
-    if (e.target.classList.contains('btn-remove-bg')) return;
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    _card.style.userSelect = 'none';
+function initDrag() {
+  let drag = null;
+
+  _card.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    _card.setPointerCapture(e.pointerId);
+  });
+
+  _card.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const rect = _card.getBoundingClientRect();
+    const dx = (e.clientX - drag.x) / rect.width  * 100;
+    const dy = (e.clientY - drag.y) / rect.height * 100;
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    moveText(dx, dy);
+  });
+
+  const end = e => { if (drag && e.pointerId === drag.id) drag = null; };
+  _card.addEventListener('pointerup', end);
+  _card.addEventListener('pointercancel', end);
+
+  _card.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 5 : 1;
+    const move = {
+      ArrowLeft:  [-step, 0], ArrowRight: [step, 0],
+      ArrowUp:    [0, -step], ArrowDown:  [0, step],
+    }[e.key];
+    if (!move) return;
     e.preventDefault();
+    moveText(...move);
   });
-
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const rect = _card.getBoundingClientRect();
-    const dx = (e.clientX - lastX) / rect.width  * 100;
-    const dy = (e.clientY - lastY) / rect.height * 100;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    setState({
-      positionX: clamp(state.positionX + dx, 5, 95),
-      positionY: clamp(state.positionY + dy, 5, 95),
-    });
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-    _card.style.userSelect = '';
-  });
-}
-
-// =============================================================
-// --- Drag (touch) ---
-// =============================================================
-
-function initTouchDrag() {
-  let lastTX, lastTY;
-
-  _card.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
-    lastTX = e.touches[0].clientX;
-    lastTY = e.touches[0].clientY;
-  }, { passive: true });
-
-  _card.addEventListener('touchmove', e => {
-    if (e.touches.length !== 1) return;
-    e.preventDefault(); // blocks page scroll during drag
-    const rect = _card.getBoundingClientRect();
-    const dx = (e.touches[0].clientX - lastTX) / rect.width  * 100;
-    const dy = (e.touches[0].clientY - lastTY) / rect.height * 100;
-    lastTX = e.touches[0].clientX;
-    lastTY = e.touches[0].clientY;
-    setState({
-      positionX: clamp(state.positionX + dx, 5, 95),
-      positionY: clamp(state.positionY + dy, 5, 95),
-    });
-  }, { passive: false }); // passive:false required for preventDefault
 }
 
 // =============================================================
@@ -565,9 +892,7 @@ function initTouchDrag() {
 // =============================================================
 
 function wireEvents() {
-  // Drag (replaces temporary calls in init)
-  initMouseDrag();
-  initTouchDrag();
+  initDrag();
 
   // --- Text row ---
   _textarea.addEventListener('input', () => {
@@ -575,7 +900,7 @@ function wireEvents() {
   });
 
   document.getElementById('btnRandom').addEventListener('click', () => {
-    setState({ text: _randomPhrase(state.text) });
+    setState({ text: randomPhrase(state.text) });
   });
 
   document.getElementById('btnRandomBg').addEventListener('click', () => {
@@ -619,30 +944,36 @@ function wireEvents() {
   // --- Advanced panel toggle ---
   document.getElementById('btnToggleAdvanced').addEventListener('click', () => {
     setState({ advancedOpen: !state.advancedOpen });
-    persistUI();
   });
 
-  // Keyboard: Escape + Ctrl+S
-  // Single listener handles both — avoids duplicate listener bugs.
+  // Keyboard: Escape, Ctrl+S, and Tab inside the import modal.
+  // Single listener handles all — avoids duplicate listener bugs.
   document.addEventListener('keydown', e => {
-    const modalOpen = !document.getElementById('importModal').hidden;
+    const modal     = document.getElementById('importModal');
+    const modalOpen = !modal.hidden;
 
     if (e.key === 'Escape') {
       if (modalOpen) {
         cancelImport();  // modal takes priority
       } else if (state.advancedOpen) {
         setState({ advancedOpen: false });
-        persistUI();
       }
       return;
     }
 
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    if (e.key === 'Tab' && modalOpen) {
+      const focusable = [...modal.querySelectorAll('button')];
+      const first = focusable[0];
+      const last  = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      if (!state.advancedOpen) {
-        setState({ advancedOpen: true });
-        persistUI();
-      }
+      if (!state.advancedOpen) setState({ advancedOpen: true });
       document.getElementById('favoritesSection')
         ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       setTimeout(() => document.getElementById('favNameInput')?.focus(), 150);
@@ -659,27 +990,28 @@ function wireEvents() {
   document.getElementById('btnRandomColors').addEventListener('click', randomColorsForCurrentBg);
 
   // --- Font size ---
+  const setFontSize = v => setState({ fontSize: roundOneDecimal(clamp(v, FONT_MIN, FONT_MAX)) });
   document.getElementById('sliderFontSize').addEventListener('input', e => {
-    setState({ fontSize: roundOneDecimal(parseFloat(e.target.value)) });
+    setFontSize(parseFloat(e.target.value));
   });
-  document.getElementById('btnFontMinus').addEventListener('click', () => {
-    setState({ fontSize: roundOneDecimal(clamp(state.fontSize - 0.1, 0.5, 8)) });
-  });
-  document.getElementById('btnFontPlus').addEventListener('click', () => {
-    setState({ fontSize: roundOneDecimal(clamp(state.fontSize + 0.1, 0.5, 8)) });
-  });
+  document.getElementById('btnFontMinus').addEventListener('click', () => setFontSize(state.fontSize - 0.1));
+  document.getElementById('btnFontPlus').addEventListener('click',  () => setFontSize(state.fontSize + 0.1));
 
-  // --- Position ---
-  document.querySelectorAll('.btn-align').forEach(btn => {
-    btn.addEventListener('click', () => setState({ textAlign: btn.dataset.align }));
+  // --- Align, effect, ratio (segmented buttons) ---
+  document.querySelectorAll('.btn-seg').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { align, effect, ratio } = btn.dataset;
+      if (align)  setState({ textAlign: align });
+      if (effect) setState({ effect });
+      if (ratio)  setState({ ratio });
+    });
   });
   document.getElementById('btnResetPosition').addEventListener('click', () => {
     setState({ positionX: 50, positionY: 50, textAlign: 'center' });
   });
 
-  // --- Ratio ---
-  document.getElementById('btnRatio').addEventListener('click', () => {
-    setState({ ratio: state.ratio === '16:9' ? '4:3' : '16:9' });
+  document.getElementById('chkTransparent').addEventListener('change', e => {
+    setState({ transparentExport: e.target.checked });
   });
 
   // --- Favorites ---
@@ -687,9 +1019,9 @@ function wireEvents() {
 
   document.getElementById('favoritesList').addEventListener('click', e => {
     const loadBtn = e.target.closest('.btn-load-fav');
-    if (loadBtn) { loadFavorite(parseInt(loadBtn.dataset.id, 10)); return; }
+    if (loadBtn) { loadFavorite(Number(loadBtn.dataset.id)); return; }
     const delBtn = e.target.closest('.btn-delete-fav');
-    if (delBtn)  { deleteFavorite(parseInt(delBtn.dataset.id, 10)); }
+    if (delBtn)  { deleteFavorite(Number(delBtn.dataset.id)); }
   });
 
   document.getElementById('btnExportFavorites').addEventListener('click', exportFavorites);
@@ -713,25 +1045,50 @@ function wireEvents() {
 // --- Custom Backgrounds ---
 // =============================================================
 
-function uploadCustomBg(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    const dataUrl = e.target.result;
+// Reads an image file and returns a JPEG data URL no larger than
+// MAX_UPLOAD_SIDE on its long side, so five of them fit in localStorage.
+async function downscaleImageFile(file) {
+  const src = URL.createObjectURL(file);
+  try {
+    const img   = await loadImage(src);
+    const scale = Math.min(1, MAX_UPLOAD_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(img.naturalWidth  * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';               // JPEG has no alpha
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', UPLOAD_QUALITY);
+  } finally {
+    URL.revokeObjectURL(src);
+  }
+}
 
-    // Direct mutation of state.customBackgrounds is an accepted exception here
-    // (same as in loadFavorite) — setState is called immediately after with the
-    // updated backgroundIndex so render() gets the correct final state.
-    if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
-      state.customBackgrounds.pop(); // evict oldest
-      toast('Oldest background removed to make room');
-    }
+// Puts a background first in the list, evicting the oldest when full. Edits
+// state.customBackgrounds directly (accepted exception): callers follow with
+// a setState carrying the new backgroundIndex.
+function addCustomBg(url) {
+  if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
+    state.customBackgrounds.pop();
+    toast('Oldest background removed to make room');
+  }
+  state.customBackgrounds.unshift(url);
+  invalidateStrip();
+  persistCustomBgs();
+}
 
-    state.customBackgrounds.unshift(dataUrl); // new upload at index 0
-    persistCustomBgs();
-    setState({ backgroundIndex: 0 });         // auto-select new upload
-    autoAdjustColors(dataUrl);
-  };
-  reader.readAsDataURL(file);
+async function uploadCustomBg(file) {
+  let url;
+  try {
+    url = await downscaleImageFile(file);
+  } catch (_) {
+    toast('Could not read that image', { type: 'error' });
+    return;
+  }
+  addCustomBg(url);
+  setState({ backgroundIndex: 0 });  // auto-select new upload
+  autoAdjustColors(url);
 }
 
 function removeCustomBg(index) {
@@ -740,6 +1097,7 @@ function removeCustomBg(index) {
   const wasActive = index === state.backgroundIndex;
 
   state.customBackgrounds.splice(index, 1);
+  invalidateStrip();
   persistCustomBgs();
 
   // Recalculate backgroundIndex
@@ -747,7 +1105,6 @@ function removeCustomBg(index) {
   if (wasActive) {
     // Select next available; clamp to valid range
     newIndex = Math.min(index, allBackgrounds().length - 1);
-    if (newIndex < 0) newIndex = 0;
   } else if (index < state.backgroundIndex) {
     // Removed item was before active — shift index down by 1
     newIndex = state.backgroundIndex - 1;
@@ -779,11 +1136,23 @@ function saveFavorite() {
   }
 
   const bg = allBackgrounds()[state.backgroundIndex];
+  let backgroundUrl = bg.url;
+  if (bg.isCustom) {
+    // The image goes to favBgs once; the favorite only keeps its hash
+    const hash = hashString(bg.url);
+    favBgs[hash] = bg.url;
+    backgroundUrl = `custom:${hash}`;
+    persistFavBgs();
+  }
+
+  let id = Date.now();
+  while (favorites.some(f => f.id === id)) id++;
+
   favorites.push({
-    id:            Date.now(),
+    id,
     name,
     text:          state.text,
-    backgroundUrl: bg ? bg.url : '',
+    backgroundUrl,
     fontSize:      state.fontSize,
     textColor:     state.textColor,
     shadowColor:   state.shadowColor,
@@ -791,13 +1160,12 @@ function saveFavorite() {
     positionY:     state.positionY,
     textAlign:     state.textAlign,
     ratio:         state.ratio,
+    effect:        state.effect,
   });
 
   persistFavorites();
   input.value = '';
-  // Invalidate dirty-check so list rebuilds
-  _favPrev.count = -1;
-  renderFavoritesList();
+  refreshFavorites();
   toast(`"${name}" saved`);
 }
 
@@ -805,29 +1173,20 @@ function loadFavorite(id) {
   const fav = favorites.find(f => f.id === id);
   if (!fav) return;
 
+  let bgIndex = 0;
   const presetIdx = backgroundPresets.findIndex(p => p.url === fav.backgroundUrl);
-  let bgIndex;
 
   if (presetIdx !== -1) {
     // Preset: account for custom bgs prepended to allBackgrounds
     bgIndex = state.customBackgrounds.length + presetIdx;
-  } else if (fav.backgroundUrl) {
-    // Custom bg: re-insert if not already present
-    // Note: direct mutation of state.customBackgrounds here is an accepted
-    // exception — setState is called immediately after with the new bgIndex.
-    let customIdx = state.customBackgrounds.indexOf(fav.backgroundUrl);
-    if (customIdx === -1) {
-      if (state.customBackgrounds.length >= MAX_CUSTOM_BGS) {
-        state.customBackgrounds.pop();
-        toast('Oldest background removed to make room');
-      }
-      state.customBackgrounds.unshift(fav.backgroundUrl);
-      persistCustomBgs();
-      customIdx = 0;
+  } else if (fav.backgroundUrl.startsWith('custom:')) {
+    const url = favBgs[fav.backgroundUrl.slice(7)];
+    if (url) {
+      bgIndex = state.customBackgrounds.indexOf(url);
+      if (bgIndex === -1) { addCustomBg(url); bgIndex = 0; }
+    } else {
+      toast('That favorite\'s background is no longer available', { type: 'error' });
     }
-    bgIndex = customIdx;
-  } else {
-    bgIndex = 0;
   }
 
   setState({
@@ -840,6 +1199,7 @@ function loadFavorite(id) {
     positionY:       fav.positionY,
     textAlign:       fav.textAlign,
     ratio:           fav.ratio,
+    effect:          fav.effect,
   });
 }
 
@@ -848,9 +1208,9 @@ function deleteFavorite(id) {
   if (idx === -1) return;
 
   const removed = favorites.splice(idx, 1)[0];
+  const nextId  = favorites[idx]?.id;   // the favorite that now sits where it was
   persistFavorites();
-  _favPrev.count = -1; // invalidate dirty-check
-  renderFavoritesList();
+  refreshFavorites();
 
   let undone = false;
   toast(`"${removed.name}" deleted`, {
@@ -858,10 +1218,11 @@ function deleteFavorite(id) {
     undoCallback: () => {
       if (undone) return;
       undone = true;
-      favorites.splice(idx, 0, removed); // re-insert at original position
+      // Back before the same neighbor, even if the list changed meanwhile
+      const at = favorites.findIndex(f => f.id === nextId);
+      favorites.splice(at === -1 ? favorites.length : at, 0, removed);
       persistFavorites();
-      _favPrev.count = -1;
-      renderFavoritesList();
+      refreshFavorites();
     },
   });
 }
@@ -871,16 +1232,24 @@ function deleteFavorite(id) {
 // =============================================================
 
 function exportFavorites() {
-  const data = { version: 2, favorites };
+  const used = new Set(favorites.map(f => f.backgroundUrl.slice(7)));
+  const backgrounds = Object.fromEntries(Object.entries(favBgs).filter(([hash]) => used.has(hash)));
+  const data = { version: 3, favorites, backgrounds };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'pineapple-favorites.json';
+  downloadBlob(blob, 'pineapple-favorites.json');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url;
+  a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);  // revoking at once can cancel the download
 }
 
 let _pendingImport = null;
+let _modalOpener   = null;
 
 function readImportFile(file) {
   const reader = new FileReader();
@@ -893,96 +1262,166 @@ function readImportFile(file) {
       toast('Unrecognized format', { type: 'error' }); return;
     }
 
-    const required = ['id','name','text','backgroundUrl','fontSize',
-                      'textColor','shadowColor','positionX','positionY','textAlign','ratio'];
-    const valid   = parsed.favorites.filter(f => required.every(k => k in f));
-    const skipped = parsed.favorites.length - valid.length;
+    const incoming = { ...favBgs, ...sanitizeBgMap(parsed.backgrounds) };
+    const bgs      = {};   // backgrounds the imported favorites need; merged on confirm
+    const seen     = new Set();
+    const valid    = parsed.favorites
+      .map(f => ingestFavorite(f, incoming, bgs))
+      .filter(f => f && !seen.has(f.id) && seen.add(f.id));
+    const skipped  = parsed.favorites.length - valid.length;
 
     if (valid.length === 0) {
       toast('No valid favorites found', { type: 'error' }); return;
     }
 
-    _pendingImport = { valid, skipped };
+    _pendingImport = { valid, skipped, bgs };
     document.getElementById('importSummary').textContent = skipped > 0
       ? `${valid.length} valid, ${skipped} skipped`
       : `${valid.length} favorite(s) to import`;
-    document.getElementById('importModal').hidden = false;
+    openImportModal();
   };
   reader.readAsText(file);
 }
 
+function openImportModal() {
+  _modalOpener = document.activeElement;
+  document.getElementById('importModal').hidden = false;
+  document.getElementById('btnImportMerge').focus();
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').hidden = true;
+  _modalOpener?.focus?.();
+  _modalOpener = null;
+}
+
 function cancelImport() {
   _pendingImport = null;
-  document.getElementById('importModal').hidden = true;
+  closeImportModal();
 }
 
 function confirmImport(mode) {
   if (!_pendingImport) return;
-  const { valid, skipped } = _pendingImport;
+  const { valid, bgs } = _pendingImport;
+  let { skipped } = _pendingImport;
   _pendingImport = null;
-  document.getElementById('importModal').hidden = true;
+  closeImportModal();
 
+  let imported;
   if (mode === 'replace') {
     favorites = valid;
+    imported  = valid.length;
   } else {
     // Merge — deduplicate by id
     const existingIds = new Set(favorites.map(f => f.id));
     const toAdd = valid.filter(f => !existingIds.has(f.id));
     favorites.push(...toAdd);
-    const dupesSkipped = (valid.length - toAdd.length) + skipped;
-    persistFavorites();
-    _favPrev.count = -1;
-    renderFavoritesList();
-    toast(dupesSkipped > 0
-      ? `${toAdd.length} imported, ${dupesSkipped} skipped`
-      : `${toAdd.length} favorite(s) imported`);
-    return;
+    imported = toAdd.length;
+    skipped += valid.length - toAdd.length;
   }
 
-  // replace path
+  Object.assign(favBgs, bgs);
+  persistFavBgs();
   persistFavorites();
-  _favPrev.count = -1;
-  renderFavoritesList();
+  refreshFavorites();
   toast(skipped > 0
-    ? `${valid.length} imported, ${skipped} skipped`
-    : `${valid.length} favorite(s) imported`);
+    ? `${imported} imported, ${skipped} skipped`
+    : `${imported} favorite(s) imported`);
 }
 
 // =============================================================
 // --- Export PNG ---
 // =============================================================
+// Drawn straight onto a canvas at a fixed resolution per ratio (RATIOS[..].out),
+// reproducing the card's CSS layout: cover background, 90%-wide centered text
+// box, em-based size, shadow or outline.
 
-function exportPNG() {
-  const btn = document.getElementById('btnDownload');
-  btn.disabled    = true;
-  _overlay.hidden = false;
+function drawCardText(ctx, W, H) {
+  if (!state.text.trim()) return;
 
-  const filename = `pineapple-time-card-${state.ratio.replace(':', '-')}.png`;
+  const fontPx = state.fontSize * EM_CQW / 100 * W;
+  const lineH  = fontPx * LINE_HEIGHT;
+  ctx.font = `${fontPx}px ${FONT_FAMILY}`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = state.textAlign;
 
-  html2canvas(_card, {
-    scale:      2,
-    useCORS:    true,
-    allowTaint: true,
-    // downloadOverlay is outside _card (sibling of timeCard inside cardContainer),
-    // so it never appears in the capture. onclone is kept as safety net.
-    onclone: cloned => {
-      const ov = cloned.getElementById('downloadOverlay');
-      if (ov) ov.remove();
-    },
-  }).then(canvas => {
-    const a = document.createElement('a');
-    a.download = filename;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  }).catch(err => {
+  const lines = wrapText(state.text, W * TEXT_BOX, s => ctx.measureText(s).width);
+  const metrics = ctx.measureText('Hg');
+  const ascent  = metrics.fontBoundingBoxAscent  ?? fontPx * 0.8;
+  const descent = metrics.fontBoundingBoxDescent ?? fontPx * 0.2;
+
+  const cx   = state.positionX / 100 * W;
+  const cy   = state.positionY / 100 * H;
+  const left = cx - W * TEXT_BOX / 2;
+  const x    = { left, center: cx, right: left + W * TEXT_BOX }[state.textAlign];
+  const top  = cy - lines.length * lineH / 2;
+
+  lines.forEach((line, i) => {
+    // Center the glyph box inside the line box, as CSS does
+    const y = top + i * lineH + (lineH - (ascent + descent)) / 2 + ascent;
+
+    if (state.effect === 'outline') {
+      ctx.lineJoin    = 'round';
+      ctx.lineWidth   = W * OUTLINE_CQW / 100;
+      ctx.strokeStyle = state.shadowColor;
+      ctx.strokeText(line, x, y);
+    } else {
+      const d = W * SHADOW_CQW / 100;
+      ctx.fillStyle = state.shadowColor;
+      ctx.fillText(line, x + d, y + d);
+      ctx.fillText(line, x - d, y - d);
+    }
+    ctx.fillStyle = state.textColor;
+    ctx.fillText(line, x, y);
+  });
+}
+
+async function renderCardToCanvas() {
+  const [W, H] = RATIOS[state.ratio].out;
+  const canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if (!state.transparentExport) {
+    const bgs = allBackgrounds();
+    const bg  = bgs[state.backgroundIndex] || bgs[0];
+    const img = await loadImage(bg.url);
+    ctx.drawImage(img, ...coverRect(img.naturalWidth, img.naturalHeight, W, H));
+  }
+
+  // The card font comes from a web font: make sure it is loaded before measuring
+  try {
+    await document.fonts.load(`40px ${FONT_FAMILY}`, state.text);
+    await document.fonts.ready;
+  } catch (_) { /* falls back to sans-serif */ }
+
+  drawCardText(ctx, W, H);
+  return canvas;
+}
+
+async function exportPNG() {
+  const btn     = document.getElementById('btnDownload');
+  const overlay = document.getElementById('downloadOverlay');
+  btn.disabled   = true;
+  overlay.hidden = false;
+
+  try {
+    const canvas = await renderCardToCanvas();
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/png');
+    });
+    const suffix = state.transparentExport ? '-transparent' : '';
+    downloadBlob(blob, `pineapple-time-card-${state.ratio.replace(':', '-')}${suffix}.png`);
+  } catch (err) {
     console.error('Export failed:', err);
     if (location.protocol === 'file:' && err instanceof DOMException && err.name === 'SecurityError') {
       toast('PNG export blocked on file:// — use the online version or serve the folder locally', { type: 'error' });
     } else {
       toast('Export error', { type: 'error' });
     }
-  }).finally(() => {
-    btn.disabled    = false;
-    _overlay.hidden = true;
-  });
+  } finally {
+    btn.disabled   = false;
+    overlay.hidden = true;
+  }
 }

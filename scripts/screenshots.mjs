@@ -12,7 +12,7 @@ const page = await (await browser.newContext({ viewport: { width: 1440, height: 
 
 await page.goto(url);
 await page.waitForTimeout(2000);
-await page.getByRole('textbox', { name: 'Type your text...' }).fill('Three days later');
+await page.getByLabel('Card text').fill('Three days later');
 await page.getByRole('button', { name: 'Colors ↺' }).click();
 await page.waitForTimeout(800);
 await page.screenshot({ path: `${out}card.png` });

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Utils Tests</title>
@@ -14,56 +14,152 @@
 <h1>Utils Tests</h1>
 <div id="output"></div>
 <div id="summary"></div>
+<!-- The real app code: app.js only wires itself up on the app page -->
+<script src="../app.js"></script>
 <script>
-// Inline copies of the functions under test (keep in sync with app.js Utils)
-const DARK_PALETTE  = ['#3e1600', '#1a0a00', '#0d1b2a', '#1b2a1b', '#2a0a2a'];
-const LIGHT_PALETTE = ['#ffeb99', '#ffe566', '#fff4cc', '#ffd700', '#fff8e1'];
-
-function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
-function roundOneDecimal(val) { return Math.round(val * 10) / 10; }
-function colorBrightness(hex) {
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return 0.299*r + 0.587*g + 0.114*b;
-}
-function generateDarkColor()  { return DARK_PALETTE[Math.floor(Math.random()*DARK_PALETTE.length)]; }
-function generateLightColor() { return LIGHT_PALETTE[Math.floor(Math.random()*LIGHT_PALETTE.length)]; }
-
-// Harness
 let passed = 0, failed = 0;
 const out = document.getElementById('output');
 function assert(desc, condition) {
   const div = document.createElement('div');
-  if (condition) { passed++; div.className='pass'; div.textContent=`✓ ${desc}`; }
-  else           { failed++; div.className='fail'; div.textContent=`✗ ${desc}`; }
+  if (condition) { passed++; div.className = 'pass'; div.textContent = `✓ ${desc}`; }
+  else           { failed++; div.className = 'fail'; div.textContent = `✗ ${desc}`; }
   out.appendChild(div);
 }
+const near = (a, b, eps = 1e-6) => Math.abs(a - b) < eps;
 
-// clamp
+// --- clamp / roundOneDecimal ---
 assert('clamp(5, 0, 10) = 5',   clamp(5,  0, 10) === 5);
 assert('clamp(-1, 0, 10) = 0',  clamp(-1, 0, 10) === 0);
 assert('clamp(11, 0, 10) = 10', clamp(11, 0, 10) === 10);
-assert('clamp(5, 5, 95) = 5',   clamp(5,  5, 95) === 5);
 assert('clamp(4, 5, 95) = 5',   clamp(4,  5, 95) === 5);
+assert('round(3.00) = 3',       roundOneDecimal(3.00) === 3);
+assert('round(0.15 + 0.15) has one decimal', roundOneDecimal(0.15 + 0.15) === 0.3);
 
-// roundOneDecimal
-assert('round(3.00) = 3',    roundOneDecimal(3.00) === 3);
-assert('round(7.95) → 8.0',  roundOneDecimal(7.95) === Math.round(7.95*10)/10);
-assert('round(0.55) → 0.6',  roundOneDecimal(0.55) === Math.round(0.55*10)/10);
+// --- color math ---
+assert('luminance white = 1',  near(hexLuminance('#ffffff'), 1));
+assert('luminance black = 0',  near(hexLuminance('#000000'), 0));
+assert('contrast white/black = 21', near(contrastRatio(1, 0), 21));
+assert('contrast is symmetric', contrastRatio(0.2, 0.7) === contrastRatio(0.7, 0.2));
+assert('LUM_SPLIT: white and black contrast equally',
+  near(contrastRatio(1, LUM_SPLIT), contrastRatio(0, LUM_SPLIT), 0.01));
 
-// colorBrightness
-assert('white = 255',               Math.round(colorBrightness('#ffffff')) === 255);
-assert('black = 0',                 Math.round(colorBrightness('#000000')) === 0);
-assert('yellow (#FFD800) > 128',    colorBrightness('#FFD800') > 128);
-assert('#3e1600 < 128',             colorBrightness('#3e1600') < 128);
-
-// generateDarkColor — always returns from DARK_PALETTE
-for (let i = 0; i < 20; i++) {
-  assert(`generateDarkColor() #${i} in DARK_PALETTE`, DARK_PALETTE.includes(generateDarkColor()));
+// --- pickColors: readable text and a shadow that stands out ---
+for (const [lum, name] of [[0.01, 'near-black'], [0.9, 'near-white'], [0.05, 'dark'], [0.6, 'light']]) {
+  let ok = true;
+  for (let i = 0; i < 40; i++) {
+    const { textColor, shadowColor } = pickColors(lum);
+    if (contrastRatio(hexLuminance(textColor), lum) < MIN_CONTRAST) ok = false;
+    if (contrastRatio(hexLuminance(textColor), hexLuminance(shadowColor)) < MIN_SHADOW_CONTRAST) ok = false;
+  }
+  assert(`pickColors on ${name} background: text >= 4.5, shadow >= 3 against text`, ok);
 }
-// generateLightColor — always returns from LIGHT_PALETTE
+{
+  // Mid-gray: no palette color reaches 4.5, so the best contrast available is taken
+  const { textColor } = pickColors(0.18);
+  const best = Math.max(...[...LIGHT_PALETTE, ...DARK_PALETTE].map(c => contrastRatio(hexLuminance(c), 0.18)));
+  assert('pickColors on mid-gray takes the best contrast available',
+    near(contrastRatio(hexLuminance(textColor), 0.18), best));
+}
+for (let i = 0; i < 20; i++) {
+  assert(`generateDarkColor() #${i} in DARK_PALETTE`,   DARK_PALETTE.includes(generateDarkColor()));
+}
 for (let i = 0; i < 20; i++) {
   assert(`generateLightColor() #${i} in LIGHT_PALETTE`, LIGHT_PALETTE.includes(generateLightColor()));
 }
+
+// --- cover mapping / sampling ---
+assert('coverRect: wider image is cropped on the sides',
+  JSON.stringify(coverRect(200, 100, 100, 100)) === JSON.stringify([-50, 0, 200, 100]));
+assert('coverRect: taller image is cropped top and bottom',
+  JSON.stringify(coverRect(100, 200, 100, 100)) === JSON.stringify([0, -50, 100, 200]));
+{
+  const [x, y] = coverToImage(0, 0.5, 2, 1);   // image twice as wide as the card
+  assert('coverToImage: card left edge maps to 25% of a 2:1 image', near(x, 0.25) && near(y, 0.5));
+  const [x2, y2] = coverToImage(0.5, 0, 0.5, 1); // image half as wide
+  assert('coverToImage: card top edge maps to 25% of a 1:2 image', near(x2, 0.5) && near(y2, 0.25));
+}
+{
+  // Left half dark (0), right half bright (1)
+  const cells = new Float32Array(LUM_GRID * LUM_GRID);
+  for (let r = 0; r < LUM_GRID; r++) for (let c = LUM_GRID / 2; c < LUM_GRID; c++) cells[r * LUM_GRID + c] = 1;
+  const map = { aspect: 1, cells };
+  assert('regionLuminance: left half is dark',
+    regionLuminance(map, { x0: 0, x1: 0.4, y0: 0, y1: 1 }, 1) < 0.01);
+  assert('regionLuminance: right half is bright',
+    regionLuminance(map, { x0: 0.6, x1: 1, y0: 0, y1: 1 }, 1) > 0.99);
+  assert('regionLuminance: whole image is the mean',
+    near(regionLuminance(map, { x0: 0, x1: 1, y0: 0, y1: 1 }, 1), 0.5, 0.01));
+  assert('regionLuminance: region outside the card is clamped, not NaN',
+    Number.isFinite(regionLuminance(map, { x0: -2, x1: 3, y0: -2, y1: 3 }, 1)));
+}
+
+// --- wrapText (10px per character) ---
+{
+  const m = s => s.length * 10;
+  const join = lines => JSON.stringify(lines);
+  assert('wrapText: short text stays on one line', join(wrapText('hello', 100, m)) === join(['hello']));
+  assert('wrapText: wraps at spaces', join(wrapText('aaa bbb ccc', 70, m)) === join(['aaa bbb', 'ccc']));
+  assert('wrapText: keeps explicit line breaks', join(wrapText('a\nb', 100, m)) === join(['a', 'b']));
+  assert('wrapText: keeps empty lines', join(wrapText('a\n\nb', 100, m)) === join(['a', '', 'b']));
+  assert('wrapText: breaks a word wider than the box', join(wrapText('abcdefgh', 30, m)) === join(['abc', 'def', 'gh']));
+  assert('wrapText: empty text is one empty line', join(wrapText('', 100, m)) === join(['']));
+}
+
+// --- hashString ---
+assert('hashString is deterministic', hashString('abc') === hashString('abc'));
+assert('hashString differs for different input', hashString('abc') !== hashString('abd'));
+assert('hashString is a lowercase alphanumeric id', /^[0-9a-z]+$/.test(hashString('data:image/png;base64,AAAA')));
+
+// --- sanitizeFavorite ---
+{
+  const good = { id: 1, name: ' Night ', text: 'Hi', backgroundUrl: backgroundPresets[0].url,
+    fontSize: 3.04, textColor: '#112233', shadowColor: '#AABBCC', positionX: 50, positionY: 50,
+    textAlign: 'left', ratio: '4:3', effect: 'outline' };
+  const f = sanitizeFavorite(good);
+  assert('sanitizeFavorite: keeps a valid favorite', f && f.name === 'Night' && f.ratio === '4:3' && f.effect === 'outline' && f.fontSize === 3);
+  assert('sanitizeFavorite: rejects no id',       sanitizeFavorite({ ...good, id: undefined }) === null);
+  assert('sanitizeFavorite: rejects non-numeric id', sanitizeFavorite({ ...good, id: 'abc' }) === null);
+  assert('sanitizeFavorite: accepts numeric string id', sanitizeFavorite({ ...good, id: '5' }).id === 5);
+  assert('sanitizeFavorite: rejects empty name',  sanitizeFavorite({ ...good, name: '  ' }) === null);
+  assert('sanitizeFavorite: rejects non-objects', sanitizeFavorite(null) === null && sanitizeFavorite('x') === null);
+  assert('sanitizeFavorite: string fontSize falls back to default', sanitizeFavorite({ ...good, fontSize: '3' }).fontSize === STYLE_DEFAULTS.fontSize);
+  assert('sanitizeFavorite: out-of-range fontSize is clamped', sanitizeFavorite({ ...good, fontSize: 99 }).fontSize === FONT_MAX);
+  assert('sanitizeFavorite: bad color falls back', sanitizeFavorite({ ...good, textColor: 'red' }).textColor === STYLE_DEFAULTS.textColor);
+  assert('sanitizeFavorite: bad ratio falls back', sanitizeFavorite({ ...good, ratio: '5:4' }).ratio === '16:9');
+  assert('sanitizeFavorite: bad align falls back', sanitizeFavorite({ ...good, textAlign: 'justify' }).textAlign === 'center');
+  assert('sanitizeFavorite: position is clamped', sanitizeFavorite({ ...good, positionX: -10, positionY: 500 }).positionX === POS_MIN);
+  assert('sanitizeFavorite: external background URL is dropped', sanitizeFavorite({ ...good, backgroundUrl: 'https://evil.example/x.png' }).backgroundUrl === '');
+  assert('sanitizeFavorite: quote in background URL is dropped', sanitizeFavorite({ ...good, backgroundUrl: "x');}body{" }).backgroundUrl === '');
+  assert('sanitizeFavorite: v2 favorite without effect gets the default', sanitizeFavorite({ ...good, effect: undefined }).effect === 'shadow');
+}
+
+// --- ingestFavorite: inline backgrounds move to the shared store ---
+{
+  const data = 'data:image/jpeg;base64,/9j/AAAA';
+  const sink = {};
+  const f = ingestFavorite({ id: 1, name: 'a', text: '', backgroundUrl: data }, {}, sink);
+  const hash = f.backgroundUrl.slice(7);
+  assert('ingestFavorite: inline data URL becomes a custom: reference', f.backgroundUrl.startsWith('custom:') && sink[hash] === data);
+
+  const sink2 = {};
+  const g = ingestFavorite({ id: 2, name: 'b', text: '', backgroundUrl: `custom:${hash}` }, { [hash]: data }, sink2);
+  assert('ingestFavorite: reference is resolved from the incoming map', g.backgroundUrl === `custom:${hash}` && sink2[hash] === data);
+
+  const h = ingestFavorite({ id: 3, name: 'c', text: '', backgroundUrl: 'custom:zzz' }, {}, {});
+  assert('ingestFavorite: reference with no data is dropped', h.backgroundUrl === '');
+}
+
+// --- sanitizeUI ---
+{
+  assert('sanitizeUI: ignores garbage', Object.keys(sanitizeUI('nope')).length === 0 && Object.keys(sanitizeUI(null)).length === 0);
+  const ui = sanitizeUI({ advancedOpen: true, ratio: '9:16', fontSize: 4, textColor: '#000000', evil: 1, transparentExport: 'yes' });
+  assert('sanitizeUI: keeps valid keys only',
+    ui.advancedOpen === true && ui.ratio === '9:16' && ui.fontSize === 4 &&
+    !('textColor' in ui) && !('evil' in ui) && !('transparentExport' in ui));
+}
+assert('sanitizeBgMap: keeps data images only',
+  JSON.stringify(sanitizeBgMap({ a1: 'data:image/png;base64,AA', b2: 'http://x/y.png', 'bad key': 'data:image/png;base64,AA' })) ===
+  JSON.stringify({ a1: 'data:image/png;base64,AA' }));
 
 document.getElementById('summary').textContent = `${passed} passed, ${failed} failed`;
 </script>

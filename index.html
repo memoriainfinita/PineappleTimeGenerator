@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pineapple Time Generator</title>
+  <meta name="description" content="Make SpongeBob-style time cards and export them as clean PNGs for video editing.">
+  <meta name="theme-color" content="#06080e">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Pineapple Time Generator">
+  <meta property="og:description" content="Make SpongeBob-style time cards and export them as clean PNGs for video editing.">
+  <meta property="og:url" content="https://memoriainfinita.github.io/PineappleTimeGenerator/">
+  <meta property="og:image" content="https://memoriainfinita.github.io/PineappleTimeGenerator/docs/PineappleTimeGenerator-demo.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
   <link href="https://fonts.cdnfonts.com/css/some-time-later" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -17,7 +26,8 @@
 
     <!-- Card preview -->
     <div id="cardContainer">
-      <div id="timeCard">
+      <div id="timeCard" tabindex="0" role="group"
+           aria-label="Time card. Drag the text or use the arrow keys to move it; Shift moves it further.">
         <!-- .text-wrapper injected by render() -->
       </div>
       <div id="downloadOverlay" class="download-overlay" hidden>
@@ -37,7 +47,7 @@
 
     <!-- Text row -->
     <div id="textRow">
-      <textarea id="textInput" rows="1" placeholder="Type your text..."></textarea>
+      <textarea id="textInput" rows="1" placeholder="Type your text..." aria-label="Card text"></textarea>
       <button id="btnRandom" title="Random phrase">Phrase ↺</button>
       <button id="btnRandomBg" title="Random background">Background ↺</button>
       <button id="btnRandomColors" class="btn-random-colors" title="Random colors">Colors ↺</button>
@@ -46,50 +56,60 @@
 
     <!-- Advanced panel -->
     <div id="advancedSection">
-      <button id="btnToggleAdvanced" class="btn-toggle-advanced">▼ Customize</button>
+      <button id="btnToggleAdvanced" class="btn-toggle-advanced" aria-expanded="false" aria-controls="advancedPanel">▼ Customize</button>
       <div id="advancedPanel" hidden>
 
         <div class="panel-section" id="sectionColors">
           <span class="panel-label">Colors</span>
           <label class="color-label">Text <input type="color" id="colorText" value="#5c2e0d"></label>
           <label class="color-label">Shadow <input type="color" id="colorShadow" value="#ffe566"></label>
+          <div class="seg-group" role="group" aria-label="Text effect">
+            <button class="btn-seg" data-effect="shadow">Shadow</button>
+            <button class="btn-seg" data-effect="outline">Outline</button>
+          </div>
         </div>
 
         <div class="panel-section" id="sectionSize">
           <span class="panel-label">Text size</span>
-          <button id="btnFontMinus" class="btn-font-step">−</button>
+          <button id="btnFontMinus" class="btn-font-step" aria-label="Smaller text">−</button>
           <span id="fontSizeDisplay">3.0em</span>
-          <button id="btnFontPlus"  class="btn-font-step">+</button>
-          <input type="range" id="sliderFontSize" min="0.5" max="8" step="0.1" value="3">
+          <button id="btnFontPlus"  class="btn-font-step" aria-label="Larger text">+</button>
+          <input type="range" id="sliderFontSize" min="0.5" max="8" step="0.1" value="3" aria-label="Text size">
         </div>
 
         <div class="panel-section" id="sectionPosition">
           <span class="panel-label">Align</span>
-          <div class="align-buttons">
-            <button id="btnAlignLeft"   class="btn-align" data-align="left">L</button>
-            <button id="btnAlignCenter" class="btn-align" data-align="center">C</button>
-            <button id="btnAlignRight"  class="btn-align" data-align="right">R</button>
+          <div class="seg-group" role="group" aria-label="Text alignment">
+            <button class="btn-seg" data-align="left"   aria-label="Align left">L</button>
+            <button class="btn-seg" data-align="center" aria-label="Align center">C</button>
+            <button class="btn-seg" data-align="right"  aria-label="Align right">R</button>
           </div>
           <button id="btnResetPosition" class="btn-reset">Reset</button>
         </div>
 
         <div class="panel-section" id="sectionRatio">
           <span class="panel-label">Format</span>
-          <button id="btnRatio" class="btn-ratio">16:9 → 4:3</button>
+          <div class="seg-group" role="group" aria-label="Aspect ratio">
+            <button class="btn-seg" data-ratio="16:9">16:9</button>
+            <button class="btn-seg" data-ratio="4:3">4:3</button>
+            <button class="btn-seg" data-ratio="9:16">9:16</button>
+            <button class="btn-seg" data-ratio="1:1">1:1</button>
+          </div>
+          <label class="check-label"><input type="checkbox" id="chkTransparent"> Transparent PNG (text only)</label>
         </div>
 
         <div class="panel-section" id="favoritesSection">
           <span class="panel-label">Favorites</span>
           <div class="fav-save-row">
-            <input type="text" id="favNameInput" placeholder="Favorite name">
+            <input type="text" id="favNameInput" placeholder="Favorite name" maxlength="80" aria-label="Favorite name">
             <button id="btnSaveFavorite" class="btn-save-fav">Save</button>
           </div>
-          <span id="favNameError" class="fav-error" hidden>Enter a name</span>
+          <span id="favNameError" class="fav-error" role="alert" hidden>Enter a name</span>
           <div id="favoritesList"></div>
           <div class="fav-io-row">
             <button id="btnExportFavorites" class="btn-export-fav">Export JSON</button>
             <button id="btnImportFavorites" class="btn-import-fav">Import JSON</button>
-            <input type="file" id="importFileInput" accept=".json" hidden>
+            <input type="file" id="importFileInput" accept=".json" aria-label="Favorites file" hidden>
           </div>
         </div>
 
@@ -99,10 +119,10 @@
   </main>
 
   <!-- Import modal -->
-  <div id="importModal" hidden>
+  <div id="importModal" role="dialog" aria-modal="true" aria-labelledby="importTitle" hidden>
     <div class="modal-overlay" id="importOverlay"></div>
     <div class="modal-box">
-      <h2>Import favorites</h2>
+      <h2 id="importTitle">Import favorites</h2>
       <p id="importSummary"></p>
       <div class="modal-buttons">
         <button id="btnImportMerge"   class="btn-merge">Merge</button>
@@ -113,9 +133,8 @@
   </div>
 
   <!-- Toast container -->
-  <div id="toastContainer"></div>
+  <div id="toastContainer" role="status" aria-live="polite"></div>
 
-  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

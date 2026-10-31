@@ -10,7 +10,6 @@
   --patrick-pink:    #FF5252;
   --seaweed-green:   #8BC34A;
   --jellyfish-purple:#9C27B0;
-  --sand-orange:     #e67e22;
   --radius:          4px;
 }
 
@@ -46,6 +45,14 @@ input[type="text"], input[type="range"], textarea {
   color: white;
   font-size: 0.9rem;
   padding: 0.4rem 0.6rem;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+#timeCard:focus-visible {
+  outline: 2px solid var(--sponge-yellow);
+  outline-offset: 2px;
 }
 
 input[type="text"]::placeholder,
@@ -87,24 +94,30 @@ main {
   width: 100%;
 }
 
+/* The card is a size container: text size and shadow are in cqw (% of card
+   width), so the card looks the same at any screen size and matches the export.
+   --ar, --ar-n, --fs, --text-color and --shadow-color are set by renderCard(). */
 #timeCard {
+  --ar: 16 / 9;
+  --ar-n: 1.7778;
   position: relative;
   width: 100%;
-  max-width: 900px;
+  max-width: min(900px, calc(75vh * var(--ar-n)));
   margin: 0 auto;
-  aspect-ratio: 16 / 9;
-  font-size: 16px;                    /* em base for text-wrapper */
+  aspect-ratio: var(--ar);
+  container-type: inline-size;
   font-family: 'Some Time Later', sans-serif;
   background: #000 center / cover no-repeat;
   overflow: hidden;
   cursor: grab;
+  touch-action: none;                 /* drag moves the text, not the page */
+  user-select: none;
+  -webkit-user-select: none;
   box-shadow: 0 5px 15px rgba(0,0,0,0.7);
   border-radius: var(--radius);
 }
 
 #timeCard:active { cursor: grabbing; }
-
-#timeCard.ratio-4-3 { aspect-ratio: 4 / 3; }
 
 .text-wrapper {
   position: absolute;
@@ -112,11 +125,22 @@ main {
   transform: translate(-50%, -50%);
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  /* left, top, font-size, text-align set by renderCard() */
+  line-height: 1.2;
+  font-size: calc(var(--fs, 3) * 16px);                 /* fallback: no container units */
+  font-size: calc(var(--fs, 3) * 1.7778cqw);            /* 1em = 16px on a 900px card */
+  color: var(--text-color);
+  text-shadow: 0.2222cqw 0.2222cqw 0 var(--shadow-color),
+              -0.2222cqw -0.2222cqw 0 var(--shadow-color);
+  /* left, top, text-align set by renderCard() */
 }
 
-/* Download overlay — positioned on cardContainer, not timeCard.
-   html2canvas captures timeCard only, so overlay never appears in export. */
+#timeCard.fx-outline .text-wrapper {
+  text-shadow: none;
+  -webkit-text-stroke: 0.4444cqw var(--shadow-color);
+  paint-order: stroke fill;
+}
+
+/* Download overlay — positioned on cardContainer, over the card */
 .download-overlay {
   position: absolute;
   inset: 0;
@@ -146,7 +170,7 @@ main {
 .card-hint {
   text-align: center;
   font-size: 0.75rem;
-  color: var(--ocean-light);
+  color: #89a;
   margin-top: -0.25rem;
 }
 
@@ -176,6 +200,7 @@ main {
   border: 2px solid #444;
   cursor: pointer;
   display: block;
+  padding: 0;
 }
 
 .thumbnail:hover  { border-color: var(--sponge-yellow); }
@@ -330,23 +355,30 @@ input[type="color"] {
 
 #sliderFontSize { flex: 1; min-width: 80px; }
 
-/* Position section */
-.align-buttons { display: flex; gap: 0.25rem; }
+/* Align section */
+/* Segmented buttons: effect, align, ratio */
+.seg-group { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 
-.btn-align {
+.btn-seg {
   background: var(--ocean-mid);
   border: 1px solid var(--ocean-light);
-  width: 32px;
+  min-width: 32px;
   height: 32px;
-  padding: 0;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
 }
 
-.btn-align.active { background: var(--sponge-blue); border-color: var(--sponge-blue); }
+.btn-seg.active { background: var(--sponge-blue); border-color: var(--sponge-blue); }
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
 
 .btn-reset { background: var(--ocean-mid); border: 1px solid var(--ocean-light); font-size: 0.8rem; }
-
-/* Ratio section */
-.btn-ratio { background: var(--sand-orange); }
 
 /* Favorites section */
 #favoritesSection { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
@@ -493,4 +525,7 @@ input[type="color"] {
   main { padding: 0.5rem; gap: 0.5rem; }
   .app-title { font-size: 1.1rem; }
   .thumbnail { width: 52px; height: 32px; }
+  #advancedPanel { grid-template-columns: repeat(2, 1fr); }
+  #textRow { flex-wrap: wrap; }
+  #textInput { flex-basis: 100%; }
 }
