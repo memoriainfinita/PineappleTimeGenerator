@@ -96,5 +96,5 @@ Key decisions:
 - [x] End-to-end verification of the CLAUDE.md checklist in Chromium: automated in `tests/smoke.mjs`, passing on 2026-10-31
 - [ ] Manual check in Firefox, Safari and a real touch device (drag, `cqw` text sizing, outline, export)
 - [ ] Manual check with the web font loaded: the sandbox could not reach `fonts.cdnfonts.com`, so export alignment was only compared with the fallback font
-- [ ] Regenerate `docs/guide/img/*.png` (`scripts/screenshots.mjs`): the customize panel changed
+- [ ] Regenerate `docs/guide/img/*.png` (`scripts/screenshots.mjs`): the UI changed. Blocked in the cloud sandbox: `fonts.cdnfonts.com` is denied, so the card font does not load; the script now stops instead of writing screenshots with the fallback font. Run it where the font loads, or allow that host in the environment.
 - [ ] Confirm `.github/workflows/test.yml` passes on GitHub
