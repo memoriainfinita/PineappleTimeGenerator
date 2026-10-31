@@ -1,16 +1,23 @@
 /* ============================================================
    Custom Properties
+   Sea-blue page, sand panels, one sponge-yellow action. Everything
+   that can be pressed or lifted uses the same hard offset shadow as
+   the text on the card.
    ============================================================ */
 :root {
-  --sponge-yellow:   #FFD800;
-  --sponge-blue:     #0070BB;
-  --ocean-dark:      #06080e;
-  --ocean-mid:       #1E2F45;
-  --ocean-light:     #2d436c;
-  --patrick-pink:    #FF5252;
-  --seaweed-green:   #8BC34A;
-  --jellyfish-purple:#9C27B0;
-  --radius:          4px;
+  --sea:        #0070BB;
+  --sea-light:  #dff1ff;
+  --sand:       #f3dfa2;
+  --cream:      #fff7dc;
+  --sponge:     #ffd800;
+  --ink:        #4a2c0f;
+  --outline:    #3a2208;
+  --ink-soft:   #7a5a2a;
+  --coral:      #ffb4a6;
+  --danger:     #b3261e;
+  --radius:     6px;
+  --lift:       2px 2px 0 var(--outline);
+  --font-ui:    'Fredoka', ui-rounded, 'Segoe UI', system-ui, sans-serif;
 }
 
 /* ============================================================
@@ -23,55 +30,73 @@
 [hidden] { display: none !important; }
 
 body {
-  background-color: var(--ocean-dark);
+  background-color: var(--sea);
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   min-height: 100vh;
 }
 
+button, input, textarea { font: inherit; }
+
 button {
-  border: none;
+  border: 2px solid var(--outline);
   border-radius: var(--radius);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--lift);
   padding: 0.4rem 0.8rem;
   cursor: pointer;
   font-size: 0.9rem;
-  color: white;
+  font-weight: 500;
+  transition: transform 0.06s, box-shadow 0.06s;
 }
 
-input[type="text"], input[type="range"], textarea {
+button:hover:not(:disabled)  { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--outline); }
+button:active:not(:disabled) { transform: translate(2px, 2px);   box-shadow: 0 0 0 var(--outline); }
+
+input[type="text"], textarea {
   border-radius: var(--radius);
-  border: 1px solid var(--ocean-light);
-  background: var(--ocean-mid);
-  color: white;
-  font-size: 0.9rem;
+  border: 2px solid var(--outline);
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 0.95rem;
   padding: 0.4rem 0.6rem;
 }
 
+input[type="text"]::placeholder,
+textarea::placeholder { color: var(--ink-soft); }
+
+/* Focus rings: white on the sea, brown on sand */
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 #timeCard:focus-visible {
-  outline: 2px solid var(--sponge-yellow);
+  outline: 3px solid #fff;
   outline-offset: 2px;
 }
 
-input[type="text"]::placeholder,
-textarea::placeholder { color: #667; }
+.panel-section :focus-visible,
+.modal-box :focus-visible { outline-color: var(--outline); }
+
+@media (prefers-reduced-motion: reduce) {
+  button { transition: none; }
+  button:hover:not(:disabled), button:active:not(:disabled) { transform: none; }
+}
 
 /* ============================================================
    Header
    ============================================================ */
 header {
   text-align: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--ocean-light);
+  padding: 1rem 1rem 0.25rem;
 }
 
 .app-title {
-  font-family: 'Some Time Later', sans-serif;
-  font-size: 1.6rem;
-  color: var(--sponge-yellow);
-  text-shadow: 2px 2px 0 var(--sponge-blue);
+  font-family: 'Some Time Later', var(--font-ui);
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: var(--sponge);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 /* ============================================================
@@ -83,7 +108,7 @@ main {
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 /* ============================================================
@@ -96,7 +121,8 @@ main {
 
 /* The card is a size container: text size and shadow are in cqw (% of card
    width), so the card looks the same at any screen size and matches the export.
-   --ar, --ar-n, --fs, --text-color and --shadow-color are set by renderCard(). */
+   --ar, --ar-n, --fs, --text-color and --shadow-color are set by renderCard().
+   The frame is a box-shadow, not a border, so it does not change the card's size. */
 #timeCard {
   --ar: 16 / 9;
   --ar-n: 1.7778;
@@ -113,7 +139,7 @@ main {
   touch-action: none;                 /* drag moves the text, not the page */
   user-select: none;
   -webkit-user-select: none;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+  box-shadow: 0 0 0 3px var(--outline), 7px 7px 0 3px var(--outline);
   border-radius: var(--radius);
 }
 
@@ -144,7 +170,7 @@ main {
 .download-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 112, 187, 0.75);
+  background: rgba(0, 112, 187, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,8 +195,8 @@ main {
    ============================================================ */
 .card-hint {
   text-align: center;
-  font-size: 0.75rem;
-  color: #89a;
+  font-size: 0.8rem;
+  color: var(--sea-light);
   margin-top: -0.25rem;
 }
 
@@ -180,11 +206,11 @@ main {
 #bgStrip {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   overflow-x: auto;
-  padding: 0.4rem 0;
+  padding: 0.5rem 0.5rem 0.6rem;
   scrollbar-width: thin;
-  scrollbar-color: var(--ocean-light) transparent;
+  scrollbar-color: var(--outline) transparent;
 }
 
 .thumbnail-wrapper {
@@ -197,26 +223,30 @@ main {
   height: 40px;
   background: #333 center / cover no-repeat;
   border-radius: var(--radius);
-  border: 2px solid #444;
+  border: 2px solid var(--outline);
+  box-shadow: var(--lift);
   cursor: pointer;
   display: block;
   padding: 0;
 }
 
-.thumbnail:hover  { border-color: var(--sponge-yellow); }
-.thumbnail.active { border-color: var(--sponge-blue); box-shadow: 0 0 6px rgba(0,112,187,0.6); }
+.thumbnail.active {
+  border-color: var(--sponge);
+  box-shadow: 0 0 0 2px var(--outline), 3px 3px 0 2px var(--outline);
+}
 
 .btn-remove-bg {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 17px;
-  height: 17px;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--patrick-pink);
-  color: white;
+  background: var(--coral);
+  color: var(--ink);
   font-size: 9px;
   padding: 0;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,19 +255,20 @@ main {
 
 .strip-separator {
   flex-shrink: 0;
-  width: 1px;
+  width: 2px;
   height: 32px;
-  background: var(--ocean-light);
+  background: var(--outline);
+  opacity: 0.5;
 }
 
 .btn-bg-upload {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  background: var(--ocean-mid);
-  border: 2px dashed var(--ocean-light);
-  color: var(--sponge-yellow);
-  font-size: 1.3rem;
+  background: var(--cream);
+  border-style: dashed;
+  color: var(--ink);
+  font-size: 1.4rem;
   padding: 0;
   display: flex;
   align-items: center;
@@ -249,13 +280,13 @@ main {
    ============================================================ */
 #textRow {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
 #textInput {
   flex: 1;
-  height: 2.4rem;
+  height: 2.6rem;
   resize: none;
   overflow: hidden;
   line-height: 1.4;
@@ -263,36 +294,39 @@ main {
 
 #textRow button {
   flex-shrink: 0;
-  height: 2.4rem;
+  height: 2.6rem;
   font-size: 1rem;
   padding: 0 0.9rem;
 }
 
-#btnRandom   { background: var(--patrick-pink); }
-#btnRandomBg { background: var(--seaweed-green); }
-#btnDownload { background: var(--jellyfish-purple); }
+/* The one action that is not a tweak */
+#btnDownload { background: var(--sponge); font-weight: 600; }
 
-#btnDownload:disabled { opacity: 0.5; cursor: not-allowed; }
+#btnDownload:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ============================================================
    Advanced panel
    ============================================================ */
-#advancedSection { border-top: 1px solid var(--ocean-light); }
-
 .btn-toggle-advanced {
   width: 100%;
   text-align: left;
   background: transparent;
-  color: var(--sponge-yellow);
-  padding: 0.65rem 0;
-  font-size: 0.95rem;
+  border-color: transparent;
+  box-shadow: none;
+  color: #fff;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
 }
+
+.btn-toggle-advanced:hover:not(:disabled),
+.btn-toggle-advanced:active:not(:disabled) { transform: none; box-shadow: none; text-decoration: underline; }
 
 #advancedPanel {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.6rem;
-  padding-bottom: 0.5rem;
+  gap: 0.75rem;
+  padding: 0.25rem 3px 0.75rem 0;
 }
 
 /* [hidden] works here because the global [hidden] { display: none !important } rule
@@ -303,16 +337,22 @@ main {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  padding: 0.6rem;
-  background: rgba(255,255,255,0.03);
+  align-content: flex-start;
+  padding: 0.7rem;
+  background: var(--sand);
+  color: var(--ink);
+  border: 2px solid var(--outline);
   border-radius: var(--radius);
+  box-shadow: 3px 3px 0 var(--outline);
 }
 
 .panel-label {
-  font-size: 0.75rem;
-  color: #89a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
   width: 100%;
-  margin-bottom: 0.1rem;
 }
 
 /* Colors section */
@@ -320,26 +360,21 @@ main {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 input[type="color"] {
   width: 34px;
   height: 34px;
   padding: 2px;
-  border: none;
-  background: transparent;
+  border: 2px solid var(--outline);
+  border-radius: var(--radius);
+  background: var(--cream);
   cursor: pointer;
-}
-
-.btn-random-colors {
-  background: linear-gradient(135deg, var(--patrick-pink), var(--sponge-blue), var(--seaweed-green));
 }
 
 /* Size section */
 .btn-font-step {
-  background: var(--ocean-mid);
-  border: 1px solid var(--ocean-light);
   width: 32px;
   height: 32px;
   padding: 0;
@@ -347,87 +382,96 @@ input[type="color"] {
 }
 
 #fontSizeDisplay {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   min-width: 3rem;
   text-align: center;
-  color: var(--sponge-yellow);
 }
 
-#sliderFontSize { flex: 1; min-width: 80px; }
+#sliderFontSize {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--sea);
+  background: none;
+  border: none;
+  padding: 0;
+}
 
-/* Align section */
 /* Segmented buttons: effect, align, ratio */
-.seg-group { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.seg-group { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 .btn-seg {
-  background: var(--ocean-mid);
-  border: 1px solid var(--ocean-light);
   min-width: 32px;
   height: 32px;
   padding: 0 0.5rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
-.btn-seg.active { background: var(--sponge-blue); border-color: var(--sponge-blue); }
+.btn-seg.active { background: var(--sponge); font-weight: 600; }
 
 .check-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
-.btn-reset { background: var(--ocean-mid); border: 1px solid var(--ocean-light); font-size: 0.8rem; }
+.check-label input { accent-color: var(--sea); width: 16px; height: 16px; }
+
+.btn-reset { font-size: 0.85rem; }
 
 /* Favorites section */
 #favoritesSection { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
 
-.fav-save-row { display: flex; gap: 0.4rem; }
+.fav-save-row { display: flex; gap: 0.5rem; }
 .fav-save-row input { flex: 1; }
 
 /* Error state for name input */
-#favNameInput.error { border-color: var(--patrick-pink); }
+#favNameInput.error { border-color: var(--danger); }
 
-.fav-error { font-size: 0.8rem; color: var(--patrick-pink); }
+.fav-error { font-size: 0.85rem; font-weight: 500; color: var(--danger); }
 
-.btn-save-fav { background: var(--seaweed-green); flex-shrink: 0; }
+.btn-save-fav { background: var(--sponge); flex-shrink: 0; font-weight: 600; }
 
 #favoritesList {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.4rem;
   max-height: 200px;
   overflow-y: auto;
+  padding: 2px;
 }
 
 .fav-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  background: rgba(255,255,255,0.04);
+  background: var(--cream);
+  border: 2px solid var(--outline);
   border-radius: var(--radius);
 }
 
 .fav-name {
   flex: 1;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fav-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+.fav-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
 
-.btn-load-fav   { background: var(--sponge-blue);   padding: 0.2rem 0.5rem; font-size: 0.78rem; }
-.btn-delete-fav { background: var(--patrick-pink);  padding: 0.2rem 0.5rem; font-size: 0.78rem; }
+.btn-load-fav,
+.btn-delete-fav { padding: 0.15rem 0.5rem; font-size: 0.8rem; }
 
-.fav-empty { font-size: 0.85rem; color: #667; font-style: italic; }
+.btn-delete-fav { background: var(--coral); }
 
-.fav-io-row { display: flex; gap: 0.4rem; }
-.btn-export-fav { background: var(--ocean-light); flex: 1; }
-.btn-import-fav { background: var(--ocean-mid); border: 1px solid var(--ocean-light); flex: 1; }
+.fav-empty { font-size: 0.9rem; color: var(--ink-soft); font-style: italic; }
+
+.fav-io-row { display: flex; gap: 0.5rem; }
+.btn-export-fav, .btn-import-fav { flex: 1; }
 
 /* ============================================================
    Import Modal
@@ -444,27 +488,28 @@ input[type="color"] {
 .modal-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 22, 38, 0.88);
+  background: rgba(0, 40, 70, 0.8);
 }
 
 .modal-box {
   position: relative;
-  background: var(--ocean-mid);
-  border-radius: 8px;
+  background: var(--sand);
+  color: var(--ink);
+  border: 2px solid var(--outline);
+  border-radius: var(--radius);
   padding: 1.5rem;
   max-width: 380px;
   width: 90%;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 5px 5px 0 var(--outline);
 }
 
-.modal-box h2  { color: var(--sponge-yellow); margin-bottom: 0.6rem; font-size: 1.1rem; }
-.modal-box p   { color: #cde; margin-bottom: 1rem; font-size: 0.9rem; }
+.modal-box h2  { margin-bottom: 0.6rem; font-size: 1.2rem; font-weight: 600; }
+.modal-box p   { margin-bottom: 1rem; font-size: 0.95rem; }
 
 .modal-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
 
-.btn-merge        { background: var(--sponge-blue); }
-.btn-replace      { background: var(--patrick-pink); }
-.btn-cancel-modal { background: var(--ocean-light); }
+.btn-merge   { background: var(--sponge); font-weight: 600; }
+.btn-replace { background: var(--coral); }
 
 /* ============================================================
    Toasts
@@ -476,7 +521,7 @@ input[type="color"] {
   transform: translateX(-50%);
   display: flex;
   flex-direction: column-reverse;
-  gap: 0.4rem;
+  gap: 0.5rem;
   z-index: 2000;
   pointer-events: none;
   min-width: 220px;
@@ -484,37 +529,38 @@ input[type="color"] {
 }
 
 .toast {
-  background: var(--seaweed-green);
-  color: white;
+  background: var(--sponge);
+  color: var(--ink);
+  border: 2px solid var(--outline);
   padding: 0.55rem 0.9rem;
   border-radius: var(--radius);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  box-shadow: 3px 3px 0 var(--outline);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   pointer-events: auto;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   animation: toast-in 0.18s ease;
 }
 
-.toast.error { background: var(--patrick-pink); }
-.toast.undo  { background: var(--ocean-light); border: 1px solid var(--sponge-blue); }
+.toast.error { background: var(--coral); }
+.toast.undo  { background: var(--cream); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
 .toast-msg  { flex: 1; }
 
 .toast-undo-btn {
-  background: none;
-  border: 1px solid rgba(255,255,255,0.5);
-  color: white;
-  padding: 0.15rem 0.45rem;
-  font-size: 0.78rem;
-  cursor: pointer;
-  border-radius: 3px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
   flex-shrink: 0;
 }
 
@@ -522,8 +568,8 @@ input[type="color"] {
    Responsive
    ============================================================ */
 @media (max-width: 600px) {
-  main { padding: 0.5rem; gap: 0.5rem; }
-  .app-title { font-size: 1.1rem; }
+  main { padding: 0.5rem 0.75rem 1rem; gap: 0.75rem; }
+  .app-title { font-size: 1.3rem; }
   .thumbnail { width: 52px; height: 32px; }
   #advancedPanel { grid-template-columns: repeat(2, 1fr); }
   #textRow { flex-wrap: wrap; }
