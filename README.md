@@ -11,7 +11,7 @@ SpongeBob-themed time card generator. Create title cards in the style of the sho
 
 **Online:** [Open Pineapple Time Generator](https://memoriainfinita.github.io/PineappleTimeGenerator/) — no install needed, ready to use.
 
-**Local:** the app must be served over http (opening `index.html` directly via `file://` breaks PNG export). Clone and start a simple server:
+**Local:** the app must be served over http (opening `index.html` directly via `file://` breaks PNG export, except for transparent PNGs). Clone and start a simple server:
 ```bash
 git clone https://github.com/memoriainfinita/PineappleTimeGenerator.git
 cd PineappleTimeGenerator
@@ -25,12 +25,12 @@ Then open `http://localhost:8000`.
 
 - **Text:** write your own or pick from 35+ iconic phrases with `Phrase ↺`; loads a random one on start
 - **Backgrounds:** 15 SpongeBob episode backgrounds + custom image upload; loads a random one on start, or pick one at random with `Background ↺`
-- **Smart colors:** `Colors ↺` analyzes background brightness and picks readable text/shadow colors
-- **Style:** font size (+/− buttons or slider), text color, shadow color
-- **Positioning:** drag text directly on the card; alignment buttons (L/C/R) and reset
-- **Aspect ratio:** toggle between 16:9 and 4:3
+- **Smart colors:** `Colors ↺` looks at the part of the background behind the text and picks text/shadow colors with enough contrast
+- **Style:** font size (+/− buttons or slider), text color, shadow color, shadow or outline effect
+- **Positioning:** drag text directly on the card, or move it with the arrow keys; alignment buttons (L/C/R) and reset
+- **Aspect ratio:** 16:9, 4:3, 9:16 or 1:1
 - **Favorites:** save, load, delete presets; export/import as JSON
-- **Export:** clean PNG at 2× resolution (no UI chrome)
+- **Export:** clean PNG at a fixed resolution (1920×1080, 1440×1080, 1080×1920 or 1080×1080), with an option for a transparent background (text only)
 
 ## How to Use
 
@@ -50,11 +50,11 @@ This project is dedicated to **[CuriousMarc](https://www.youtube.com/c/Curiousma
 ## Technologies
 
 - HTML5 / CSS3 / JavaScript (vanilla)
-- [html2canvas](https://html2canvas.hertzen.com/) for image export
+- Canvas 2D for image export (no libraries)
 
 ## Development
 
-Three files (`index.html`, `style.css`, `app.js`), no build step.
+Three files (`index.html`, `style.css`, `app.js`), no build step. Tests: open `tests/test-utils.html` over http for the unit tests, or run `node tests/smoke.mjs` for the end-to-end smoke test (needs [Playwright](https://playwright.dev/); CI runs it on every push).
 
 ## License
 

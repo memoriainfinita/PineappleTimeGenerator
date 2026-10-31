@@ -5,19 +5,24 @@
 - `index.html` — markup only
 - `style.css` — all CSS (custom properties, layout, card, strip, panel, modals, toasts)
 - `app.js` — all JS (Data, Utils, State, Render, Events, Init)
-- `tests/test-utils.html` — browser test harness for pure functions
-- No build step. Serverless. `file://` compatible.
+- `tests/test-utils.html` — browser unit tests; loads the real `app.js` (open it over http)
+- `tests/smoke.mjs` — end-to-end smoke test in Chromium (`node tests/smoke.mjs`, needs Playwright); CI runs it from `.github/workflows/test.yml`
+- No build step. Serverless. The app runs from `file://`, except PNG export of non-transparent cards (canvas tainting): serve over http for that.
 
 ## Architecture
 
 Single `state` object, mutated only via `setState(patch)` which always calls `render()`.  
 Exception: `init()` mutates state directly with `Object.assign` + one `render()`.
 
-DOM is always derived from state. Strip and favorites list use dirty-checks to avoid rebuilding on every keystroke.
+DOM is always derived from state. Strip and favorites list use dirty-checks to avoid rebuilding on every keystroke. Anything that edits `state.customBackgrounds` must call `invalidateStrip()`.
+
+The card is a CSS size container: text size and shadow are in `cqw`, so the card looks the same at any screen size. The PNG export (`renderCardToCanvas`) redraws the card on a canvas at a fixed resolution per ratio (`RATIOS[...].out`), reproducing that layout; if you change the text CSS, change `drawCardText` too.
+
+Everything read back from localStorage or an imported file goes through the sanitizers (`sanitizeFavorite`, `sanitizeUI`, ...). Favorites store custom backgrounds by reference (`custom:<hash>`), with the image in `pineapple_v2_fav_bgs`.
 
 ## Testing Checklist (v2)
 
-Open `index.html` in Chrome directly.
+`node tests/smoke.mjs` runs most of this list automatically. Run the rest by hand, serving the folder over http (`python -m http.server`).
 
 **Init:**
 - [ ] Loads with random phrase in textarea
@@ -43,7 +48,7 @@ Open `index.html` in Chrome directly.
 - [ ] Click thumbnails: changes background and updates colors
 - [ ] Active thumbnail always visible after change (auto-scroll)
 - [ ] Upload custom image: first thumbnail, auto-selected
-- [ ] Upload 5 images: 6th evicts oldest with toast
+- [ ] Upload 5 images: 6th evicts oldest with toast; uploads are downscaled (long side <= 1920px)
 - [ ] ✕ on custom thumbnail: removes correctly, reindexing correct
 - [ ] Reload: custom backgrounds persist
 
@@ -54,24 +59,28 @@ Open `index.html` in Chrome directly.
 - [ ] Ctrl+S opens panel and focuses favorite name input
 - [ ] +/− font size: no float drift (always one decimal)
 - [ ] Align L/C/R: visible on multiline text
-- [ ] 16:9 ↔ 4:3 toggle: changes aspect ratio
+- [ ] 16:9 / 4:3 / 9:16 / 1:1 buttons: change aspect ratio; text keeps its size relative to the card
+- [ ] Shadow / Outline: switches the text effect
+- [ ] Arrow keys on the focused card move the text (Shift = 5)
 
 **Favorites:**
 - [ ] Save without name: "Enter a name" + red border on input
 - [ ] Save with name: appears at top of list
 - [ ] Load: restores full state including background
 - [ ] Delete: toast with Undo 5s; Undo restores at original position
-- [ ] Export: JSON with `{ "version": 2, "favorites": [...] }`
+- [ ] Export: JSON with `{ "version": 3, "favorites": [...], "backgrounds": {...} }`
 - [ ] Import + merge: no duplicates created
 - [ ] Import + replace: list fully replaced
 - [ ] Cancel import (overlay / Escape / button): nothing imported
 
 **Export PNG:**
 - [ ] PNG without UI chrome
-- [ ] PNG resolution ~2x of card
-- [ ] Background, text, colors and position exported correctly
+- [ ] PNG resolution fixed per ratio: 1920x1080, 1440x1080, 1080x1920, 1080x1080
+- [ ] Background, text, colors, effect and position exported correctly (match the card)
+- [ ] Transparent PNG: no background, text only
+- [ ] From `file://`: non-transparent export shows the explanatory error
 
 **Persistence:**
-- [ ] Reload: `advancedOpen` restored
+- [ ] Reload: `advancedOpen`, text size, alignment, position, format and effect restored
 - [ ] Reload: custom backgrounds persist
 - [ ] Reload: favorites persist
