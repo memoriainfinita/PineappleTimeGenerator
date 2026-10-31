@@ -11,7 +11,7 @@ Open https://memoriainfinita.github.io/PineappleTimeGenerator/. Everything happe
 The page starts with a random phrase over a random background. Then:
 
 1. **Write your text** in the box under the card, or press **Phrase ↺** for one of the 35 or more iconic phrases
-2. **Choose a background** from the strip below the card, press **Background ↺** for a random one, or press **+** at the end of the strip to upload an image of your own
+2. **Choose a background** from the strip below the card, press **Background ↺** for a random one, or press **+** at the start of the strip to upload an image of your own
 3. Press **Colors ↺**: it looks at the part of the background behind the text and picks a text colour and a shadow colour that read well on it
 4. **Drag the text** on the card to place it, or focus the card and use the arrow keys (Shift moves it further)
 5. Press **Download ↓** to get a PNG with none of the page around it, at a fixed size: 1920×1080 for 16:9, 1440×1080 for 4:3, 1080×1920 for 9:16 and 1080×1080 for 1:1

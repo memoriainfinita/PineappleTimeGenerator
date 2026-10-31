@@ -18,11 +18,16 @@ DOM is always derived from state. Strip and favorites list use dirty-checks to a
 
 The card is a CSS size container: text size and shadow are in `cqw`, so the card looks the same at any screen size. The PNG export (`renderCardToCanvas`) redraws the card on a canvas at a fixed resolution per ratio (`RATIOS[...].out`), reproducing that layout; if you change the text CSS, change `drawCardText` too.
 
+Style fields live in one list, `STYLE_DEFAULTS`, plus one validator each in `STYLE_VALIDATORS`; favorites, persisted UI and sanitizers derive from them. Card sizes are constants in `app.js` injected as CSS variables (`applyCardMetrics`). `render()` skips card style and control updates when only the position changed (drag).
+
 Everything read back from localStorage or an imported file goes through the sanitizers (`sanitizeFavorite`, `sanitizeUI`, ...). Favorites store custom backgrounds by reference (`custom:<hash>`), with the image in `pineapple_v2_fav_bgs`.
 
 ## Testing Checklist (v2)
 
 `node tests/smoke.mjs` runs most of this list automatically. Run the rest by hand, serving the folder over http (`python -m http.server`).
+
+**UI:**
+- [ ] No explanatory text in the app: every button, control and the card has a tooltip (`title`) instead
 
 **Init:**
 - [ ] Loads with random phrase in textarea
@@ -47,6 +52,7 @@ Everything read back from localStorage or an imported file goes through the sani
 **Backgrounds:**
 - [ ] Click thumbnails: changes background and updates colors
 - [ ] Active thumbnail always visible after change (auto-scroll)
+- [ ] Upload button (+) is the first item of the strip and stays visible while it scrolls
 - [ ] Upload custom image: first thumbnail, auto-selected
 - [ ] Upload 5 images: 6th evicts oldest with toast; uploads are downscaled (long side <= 1920px)
 - [ ] ✕ on custom thumbnail: removes correctly, reindexing correct

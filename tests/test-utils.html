@@ -60,12 +60,6 @@ for (const [lum, name] of [[0.01, 'near-black'], [0.9, 'near-white'], [0.05, 'da
   assert('pickColors on mid-gray takes the best contrast available',
     near(contrastRatio(hexLuminance(textColor), 0.18), best));
 }
-for (let i = 0; i < 20; i++) {
-  assert(`generateDarkColor() #${i} in DARK_PALETTE`,   DARK_PALETTE.includes(generateDarkColor()));
-}
-for (let i = 0; i < 20; i++) {
-  assert(`generateLightColor() #${i} in LIGHT_PALETTE`, LIGHT_PALETTE.includes(generateLightColor()));
-}
 
 // --- cover mapping / sampling ---
 assert('coverRect: wider image is cropped on the sides',
@@ -148,6 +142,14 @@ assert('hashString is a lowercase alphanumeric id', /^[0-9a-z]+$/.test(hashStrin
   const h = ingestFavorite({ id: 3, name: 'c', text: '', backgroundUrl: 'custom:zzz' }, {}, {});
   assert('ingestFavorite: reference with no data is dropped', h.backgroundUrl === '');
 }
+
+// --- style keys: defaults, validators and persisted UI keys stay in step ---
+assert('STYLE_VALIDATORS has one validator per style key',
+  JSON.stringify(Object.keys(STYLE_VALIDATORS).sort()) === JSON.stringify([...STYLE_KEYS].sort()));
+assert('STYLE_DEFAULTS pass their own validators',
+  STYLE_KEYS.every(k => STYLE_VALIDATORS[k](STYLE_DEFAULTS[k]) === STYLE_DEFAULTS[k]));
+assert('UI_KEYS never include colors', !UI_KEYS.some(k => k.endsWith('Color')));
+assert('pick copies only the listed keys', JSON.stringify(pick({ a: 1, b: 2, c: 3 }, ['a', 'c'])) === JSON.stringify({ a: 1, c: 3 }));
 
 // --- sanitizeUI ---
 {

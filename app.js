@@ -87,6 +87,8 @@ const STYLE_DEFAULTS = {
   effect:      'shadow',
 };
 
+const STYLE_KEYS = Object.keys(STYLE_DEFAULTS);
+
 const MIN_CONTRAST     = 4.5;   // WCAG AA for normal text
 const MIN_SHADOW_CONTRAST = 3;
 const LUM_SPLIT        = 0.179; // luminance where white and black text contrast equally
@@ -112,8 +114,11 @@ function randomItem(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-function generateDarkColor()  { return randomItem(DARK_PALETTE); }
-function generateLightColor() { return randomItem(LIGHT_PALETTE); }
+function pick(obj, keys) {
+  return Object.fromEntries(keys.map(k => [k, obj[k]]));
+}
+
+const $ = id => document.getElementById(id);
 
 // --- Color math (WCAG relative luminance) ---
 
@@ -249,25 +254,34 @@ function isDataImage(url) {
   return typeof url === 'string' && url.startsWith('data:image/');
 }
 
+// One validator per style field (a key of STYLE_DEFAULTS): returns the clean
+// value, or undefined to drop it.
+const STYLE_VALIDATORS = {
+  fontSize:    v => Number.isFinite(v) ? clamp(roundOneDecimal(v), FONT_MIN, FONT_MAX) : undefined,
+  textColor:   v => HEX_RE.test(v) ? v : undefined,
+  shadowColor: v => HEX_RE.test(v) ? v : undefined,
+  positionX:   v => Number.isFinite(v) ? clamp(v, POS_MIN, POS_MAX) : undefined,
+  positionY:   v => Number.isFinite(v) ? clamp(v, POS_MIN, POS_MAX) : undefined,
+  textAlign:   v => ALIGNS.includes(v) ? v : undefined,
+  ratio:       v => RATIO_KEYS.includes(v) ? v : undefined,
+  effect:      v => EFFECTS.includes(v) ? v : undefined,
+};
+
 // Returns only the style fields of `o` that are valid.
 function normalizeStyle(o) {
   const s = {};
-  if (Number.isFinite(o.fontSize))      s.fontSize    = clamp(roundOneDecimal(o.fontSize), FONT_MIN, FONT_MAX);
-  if (HEX_RE.test(o.textColor))         s.textColor   = o.textColor;
-  if (HEX_RE.test(o.shadowColor))       s.shadowColor = o.shadowColor;
-  if (Number.isFinite(o.positionX))     s.positionX   = clamp(o.positionX, POS_MIN, POS_MAX);
-  if (Number.isFinite(o.positionY))     s.positionY   = clamp(o.positionY, POS_MIN, POS_MAX);
-  if (ALIGNS.includes(o.textAlign))     s.textAlign   = o.textAlign;
-  if (RATIO_KEYS.includes(o.ratio))     s.ratio       = o.ratio;
-  if (EFFECTS.includes(o.effect))       s.effect      = o.effect;
+  for (const key of STYLE_KEYS) {
+    const v = STYLE_VALIDATORS[key](o[key]);
+    if (v !== undefined) s[key] = v;
+  }
   return s;
 }
 
 function sanitizeUI(raw) {
-  const o  = raw && typeof raw === 'object' ? raw : {};
-  const ui = normalizeStyle(o);
-  delete ui.textColor;   // colors are recomputed on every load
-  delete ui.shadowColor;
+  const o     = raw && typeof raw === 'object' ? raw : {};
+  const style = normalizeStyle(o);
+  const ui    = {};
+  for (const key of UI_KEYS) if (key in style) ui[key] = style[key];
   if (typeof o.advancedOpen === 'boolean')      ui.advancedOpen      = o.advancedOpen;
   if (typeof o.transparentExport === 'boolean') ui.transparentExport = o.transparentExport;
   return ui;
@@ -330,7 +344,7 @@ function sanitizeBgMap(raw) {
 const _regularToast = { el: null, timer: null };
 
 function toast(message, { type = 'default', undoCallback = null } = {}) {
-  const container = document.getElementById('toastContainer');
+  const container = $('toastContainer');
 
   if (type === 'undo') {
     // Undo toasts stack — max 3 visible
@@ -372,6 +386,7 @@ function _buildToast(message, cssClass, undoCallback) {
     const btn = document.createElement('button');
     btn.className = 'toast-undo-btn';
     btn.textContent = 'Undo';
+    btn.title = 'Restore the deleted favorite';
     btn.addEventListener('click', () => { undoCallback(); t.remove(); });
     t.appendChild(btn);
   }
@@ -398,9 +413,9 @@ const state = {
   transparentExport: false,
 };
 
-// Keys of `state` remembered between visits (see persistUI)
-const UI_KEYS = ['advancedOpen', 'fontSize', 'textAlign', 'ratio',
-                 'positionX', 'positionY', 'effect', 'transparentExport'];
+// Keys of `state` remembered between visits (see persistUI). Colors are not:
+// they are recomputed from the background on every load.
+const UI_KEYS = [...STYLE_KEYS.filter(k => !k.endsWith('Color')), 'advancedOpen', 'transparentExport'];
 
 // Favorites are NOT in state — managed separately to avoid
 // rebuilding the favorites list on every keystroke.
@@ -465,7 +480,7 @@ let _uiTimer = null;
 function persistUI() {
   clearTimeout(_uiTimer);
   _uiTimer = null;
-  saveToLS(LS_UI, Object.fromEntries(UI_KEYS.map(k => [k, state[k]])));
+  saveToLS(LS_UI, pick(state, UI_KEYS));
 }
 
 function schedulePersistUI() {
@@ -484,9 +499,22 @@ function persistFavBgs()    { saveToLS(LS_FAV_BGS, favBgs); }
 // DOM refs — populated in init() after DOMContentLoaded
 let _card, _strip, _textarea;
 
-let _renderedBg = null;
+let _renderedBg   = null;
+let _renderedText = null;
+let _wrapper      = null;
 
-function renderCard() {
+// Card sizes come from the constants above, so CSS and the export share one source.
+function applyCardMetrics() {
+  const set = (name, value) => _card.style.setProperty(name, value);
+  set('--em',            `${EM_CQW}cqw`);
+  set('--shadow-offset', `${SHADOW_CQW}cqw`);
+  set('--outline-width', `${OUTLINE_CQW}cqw`);
+  set('--line-height',   LINE_HEIGHT);
+  set('--text-box',      `${TEXT_BOX * 100}%`);
+}
+
+// `styleChanged`: some style field other than the position changed (see render)
+function renderCard(styleChanged) {
   const bgs = allBackgrounds();
   const bg  = bgs[state.backgroundIndex] || bgs[0];
 
@@ -496,26 +524,30 @@ function renderCard() {
     _card.style.backgroundImage = `url('${bg.url}')`;
   }
 
-  const ratio = RATIOS[state.ratio];
-  _card.style.setProperty('--ar', `${ratio.w} / ${ratio.h}`);
-  _card.style.setProperty('--ar-n', ratio.w / ratio.h);
-  _card.style.setProperty('--fs', state.fontSize);
-  _card.style.setProperty('--text-color', state.textColor);
-  _card.style.setProperty('--shadow-color', state.shadowColor);
-  _card.classList.toggle('fx-outline', state.effect === 'outline');
-
-  // Text wrapper — update in place, never replace the element
-  let wrapper = _card.querySelector('.text-wrapper');
-  if (!wrapper) {
-    wrapper = document.createElement('div');
-    wrapper.className = 'text-wrapper';
-    _card.appendChild(wrapper);
+  if (styleChanged) {
+    const ratio = RATIOS[state.ratio];
+    _card.style.setProperty('--ar', `${ratio.w} / ${ratio.h}`);
+    _card.style.setProperty('--ar-n', ratio.w / ratio.h);
+    _card.style.setProperty('--fs', state.fontSize);
+    _card.style.setProperty('--text-color', state.textColor);
+    _card.style.setProperty('--shadow-color', state.shadowColor);
+    _card.classList.toggle('fx-outline', state.effect === 'outline');
   }
 
-  wrapper.textContent = state.text || '';
-  wrapper.style.left      = `${state.positionX}%`;
-  wrapper.style.top       = `${state.positionY}%`;
-  wrapper.style.textAlign = state.textAlign;
+  // Text wrapper — update in place, never replace the element
+  if (!_wrapper) {
+    _wrapper = document.createElement('div');
+    _wrapper.className = 'text-wrapper';
+    _card.appendChild(_wrapper);
+  }
+
+  if (state.text !== _renderedText) {
+    _renderedText = state.text;
+    _wrapper.textContent = state.text;
+  }
+  _wrapper.style.left      = `${state.positionX}%`;
+  _wrapper.style.top       = `${state.positionY}%`;
+  _wrapper.style.textAlign = state.textAlign;
 }
 
 // Strip dirty-check — avoids rebuilding on text/color/position changes.
@@ -532,14 +564,13 @@ function renderStrip() {
   _stripPrev.version         = _stripVersion;
   _stripPrev.backgroundIndex = state.backgroundIndex;
 
-  const bgs       = allBackgrounds();
-  const uploadBtn = document.getElementById('btnBgUpload');
+  const bgs = allBackgrounds();
 
   // Keep keyboard focus on the same thumbnail across the rebuild
   const focusedIdx = _strip.contains(document.activeElement)
     ? document.activeElement.dataset.index : undefined;
 
-  // Remove existing thumbnails and separators; keep the upload button
+  // Remove existing thumbnails and separators; the upload button stays first
   _strip.querySelectorAll('.thumbnail-wrapper, .strip-separator').forEach(el => el.remove());
 
   const hasCustom = state.customBackgrounds.length > 0;
@@ -549,7 +580,7 @@ function renderStrip() {
     if (hasCustom && i === state.customBackgrounds.length) {
       const sep = document.createElement('div');
       sep.className = 'strip-separator';
-      _strip.insertBefore(sep, uploadBtn);
+      _strip.appendChild(sep);
     }
 
     const wrapper = document.createElement('div');
@@ -571,11 +602,12 @@ function renderStrip() {
       rmBtn.className = 'btn-remove-bg';
       rmBtn.textContent = '✕';
       rmBtn.setAttribute('aria-label', `Remove ${bg.label}`);
+      rmBtn.setAttribute('title', 'Remove this background');
       rmBtn.dataset.index = i;
       wrapper.appendChild(rmBtn);
     }
 
-    _strip.insertBefore(wrapper, uploadBtn);
+    _strip.appendChild(wrapper);
   });
 
   if (focusedIdx !== undefined) {
@@ -599,7 +631,7 @@ function refreshFavorites() {
 }
 
 function renderFavoritesList() {
-  const list = document.getElementById('favoritesList');
+  const list = $('favoritesList');
   if (!list) return;
 
   const currentIds = favorites.map(f => f.id).join(',');
@@ -633,12 +665,14 @@ function renderFavoritesList() {
     loadBtn.className = 'btn-load-fav';
     loadBtn.textContent = 'Load';
     loadBtn.setAttribute('aria-label', `Load ${fav.name}`);
+    loadBtn.setAttribute('title', 'Load this favorite');
     loadBtn.dataset.id = fav.id;
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn-delete-fav';
     delBtn.textContent = '✕';
     delBtn.setAttribute('aria-label', `Delete ${fav.name}`);
+    delBtn.setAttribute('title', 'Delete this favorite (you can undo)');
     delBtn.dataset.id = fav.id;
 
     actions.appendChild(loadBtn);
@@ -649,53 +683,75 @@ function renderFavoritesList() {
   });
 }
 
-function renderControls() {
-  // Font size
-  const slider  = document.getElementById('sliderFontSize');
-  const display = document.getElementById('fontSizeDisplay');
-  if (slider)  slider.value = state.fontSize;
-  if (display) display.textContent = `${state.fontSize.toFixed(1)}em`;
+// Control elements, looked up once
+let _ctl = null;
+function controls() {
+  return _ctl ??= {
+    slider:      $('sliderFontSize'),
+    display:     $('fontSizeDisplay'),
+    colorText:   $('colorText'),
+    colorShadow: $('colorShadow'),
+    transparent: $('chkTransparent'),
+    panel:       $('advancedPanel'),
+    toggle:      $('btnToggleAdvanced'),
+    download:    $('btnDownload'),
+    seg: {
+      align:  [...document.querySelectorAll('.btn-seg[data-align]')],
+      ratio:  [...document.querySelectorAll('.btn-seg[data-ratio]')],
+      effect: [...document.querySelectorAll('.btn-seg[data-effect]')],
+    },
+  };
+}
 
-  // Segmented buttons: align, ratio, effect
-  for (const [selector, attr, value] of [
-    ['.btn-seg[data-align]',  'align',  state.textAlign],
-    ['.btn-seg[data-ratio]',  'ratio',  state.ratio],
-    ['.btn-seg[data-effect]', 'effect', state.effect],
-  ]) {
-    document.querySelectorAll(selector).forEach(btn => {
-      const on = btn.dataset[attr] === value;
-      btn.classList.toggle('active', on);
-      btn.setAttribute('aria-pressed', on);
-    });
+function renderControls(styleChanged) {
+  if (styleChanged) {
+    const c = controls();
+    c.slider.value = state.fontSize;
+    c.display.textContent = `${state.fontSize.toFixed(1)}em`;
+
+    // Segmented buttons: align, ratio, effect
+    const current = { align: state.textAlign, ratio: state.ratio, effect: state.effect };
+    for (const [attr, buttons] of Object.entries(c.seg)) {
+      for (const btn of buttons) {
+        const on = btn.dataset[attr] === current[attr];
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', on);
+      }
+    }
+
+    c.colorText.value   = state.textColor;
+    c.colorShadow.value = state.shadowColor;
+    c.transparent.checked = state.transparentExport;
+
+    c.panel.hidden = !state.advancedOpen;
+    c.toggle.setAttribute('aria-expanded', state.advancedOpen);
+
+    const [w, h] = RATIOS[state.ratio].out;
+    c.download.title = `Download a ${w}×${h} PNG` +
+      (state.transparentExport ? ' with a transparent background (text only)' : '');
   }
 
-  // Color pickers
-  const colorText   = document.getElementById('colorText');
-  const colorShadow = document.getElementById('colorShadow');
-  if (colorText)   colorText.value   = state.textColor;
-  if (colorShadow) colorShadow.value = state.shadowColor;
-
-  const chkTransparent = document.getElementById('chkTransparent');
-  if (chkTransparent) chkTransparent.checked = state.transparentExport;
-
-  // Advanced panel visibility
-  const panel = document.getElementById('advancedPanel');
-  if (panel) panel.hidden = !state.advancedOpen;
-  document.getElementById('btnToggleAdvanced')
-    ?.setAttribute('aria-expanded', state.advancedOpen);
-
   // Textarea — skip if focused to prevent cursor jump while typing
-  if (_textarea && document.activeElement !== _textarea) {
+  if (document.activeElement !== _textarea && _textarea.value !== state.text) {
     _textarea.value = state.text;
   }
 
   renderFavoritesList();
 }
 
+// Everything the controls and the card style depend on, except the position
+// (which changes on every drag step) and the text (handled on its own).
+let _styleSig = null;
+
 function render() {
-  renderCard();
+  const sig = [...STYLE_KEYS.filter(k => !k.startsWith('position')).map(k => state[k]),
+               state.transparentExport, state.advancedOpen].join('|');
+  const styleChanged = sig !== _styleSig;
+  _styleSig = sig;
+
+  renderCard(styleChanged);
   renderStrip();
-  renderControls();
+  renderControls(styleChanged);
 }
 
 // =============================================================
@@ -781,9 +837,14 @@ function randomColorsForCurrentBg() {
 
 function init() {
   // DOM refs
-  _card     = document.getElementById('timeCard');
-  _strip    = document.getElementById('bgStrip');
-  _textarea = document.getElementById('textInput');
+  _card     = $('timeCard');
+  _strip    = $('bgStrip');
+  _textarea = $('textInput');
+  applyCardMetrics();
+  for (const btn of controls().seg.ratio) {
+    const [w, h] = RATIOS[btn.dataset.ratio].out;
+    btn.title = `${btn.dataset.ratio}: exports ${w}×${h}`;
+  }
 
   // Load all persisted data. Everything read back is sanitized: storage can
   // hold data from older versions or edited by hand.
@@ -836,7 +897,7 @@ function randomPhrase(current = '') {
 }
 
 // Registered only on the app page, so tests can load this file on their own.
-if (document.getElementById('timeCard')) {
+if ($('timeCard')) {
   document.addEventListener('DOMContentLoaded', init);
   window.addEventListener('pagehide', () => { if (_uiTimer !== null) persistUI(); });
 }
@@ -899,11 +960,11 @@ function wireEvents() {
     setState({ text: _textarea.value });
   });
 
-  document.getElementById('btnRandom').addEventListener('click', () => {
+  $('btnRandom').addEventListener('click', () => {
     setState({ text: randomPhrase(state.text) });
   });
 
-  document.getElementById('btnRandomBg').addEventListener('click', () => {
+  $('btnRandomBg').addEventListener('click', () => {
     const all = allBackgrounds();
     if (all.length <= 1) return;
     let idx;
@@ -913,7 +974,7 @@ function wireEvents() {
     autoAdjustColors(all[idx].url);
   });
 
-  document.getElementById('btnDownload').addEventListener('click', exportPNG);
+  $('btnDownload').addEventListener('click', exportPNG);
 
   // --- Background strip (event delegation) ---
   _strip.addEventListener('click', e => {
@@ -931,25 +992,25 @@ function wireEvents() {
       return;
     }
     if (e.target.closest('#btnBgUpload')) {
-      document.getElementById('bgUploadInput').click();
+      $('bgUploadInput').click();
     }
   });
 
-  document.getElementById('bgUploadInput').addEventListener('change', e => {
+  $('bgUploadInput').addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) uploadCustomBg(file);
     e.target.value = '';
   });
 
   // --- Advanced panel toggle ---
-  document.getElementById('btnToggleAdvanced').addEventListener('click', () => {
+  $('btnToggleAdvanced').addEventListener('click', () => {
     setState({ advancedOpen: !state.advancedOpen });
   });
 
   // Keyboard: Escape, Ctrl+S, and Tab inside the import modal.
   // Single listener handles all — avoids duplicate listener bugs.
   document.addEventListener('keydown', e => {
-    const modal     = document.getElementById('importModal');
+    const modal     = $('importModal');
     const modalOpen = !modal.hidden;
 
     if (e.key === 'Escape') {
@@ -974,28 +1035,28 @@ function wireEvents() {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       if (!state.advancedOpen) setState({ advancedOpen: true });
-      document.getElementById('favoritesSection')
+      $('favoritesSection')
         ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      setTimeout(() => document.getElementById('favNameInput')?.focus(), 150);
+      setTimeout(() => $('favNameInput')?.focus(), 150);
     }
   });
 
   // --- Colors ---
-  document.getElementById('colorText').addEventListener('input', e => {
+  $('colorText').addEventListener('input', e => {
     setState({ textColor: e.target.value });
   });
-  document.getElementById('colorShadow').addEventListener('input', e => {
+  $('colorShadow').addEventListener('input', e => {
     setState({ shadowColor: e.target.value });
   });
-  document.getElementById('btnRandomColors').addEventListener('click', randomColorsForCurrentBg);
+  $('btnRandomColors').addEventListener('click', randomColorsForCurrentBg);
 
   // --- Font size ---
   const setFontSize = v => setState({ fontSize: roundOneDecimal(clamp(v, FONT_MIN, FONT_MAX)) });
-  document.getElementById('sliderFontSize').addEventListener('input', e => {
+  $('sliderFontSize').addEventListener('input', e => {
     setFontSize(parseFloat(e.target.value));
   });
-  document.getElementById('btnFontMinus').addEventListener('click', () => setFontSize(state.fontSize - 0.1));
-  document.getElementById('btnFontPlus').addEventListener('click',  () => setFontSize(state.fontSize + 0.1));
+  $('btnFontMinus').addEventListener('click', () => setFontSize(state.fontSize - 0.1));
+  $('btnFontPlus').addEventListener('click',  () => setFontSize(state.fontSize + 0.1));
 
   // --- Align, effect, ratio (segmented buttons) ---
   document.querySelectorAll('.btn-seg').forEach(btn => {
@@ -1006,39 +1067,39 @@ function wireEvents() {
       if (ratio)  setState({ ratio });
     });
   });
-  document.getElementById('btnResetPosition').addEventListener('click', () => {
+  $('btnResetPosition').addEventListener('click', () => {
     setState({ positionX: 50, positionY: 50, textAlign: 'center' });
   });
 
-  document.getElementById('chkTransparent').addEventListener('change', e => {
+  $('chkTransparent').addEventListener('change', e => {
     setState({ transparentExport: e.target.checked });
   });
 
   // --- Favorites ---
-  document.getElementById('btnSaveFavorite').addEventListener('click', saveFavorite);
+  $('btnSaveFavorite').addEventListener('click', saveFavorite);
 
-  document.getElementById('favoritesList').addEventListener('click', e => {
+  $('favoritesList').addEventListener('click', e => {
     const loadBtn = e.target.closest('.btn-load-fav');
     if (loadBtn) { loadFavorite(Number(loadBtn.dataset.id)); return; }
     const delBtn = e.target.closest('.btn-delete-fav');
     if (delBtn)  { deleteFavorite(Number(delBtn.dataset.id)); }
   });
 
-  document.getElementById('btnExportFavorites').addEventListener('click', exportFavorites);
-  document.getElementById('btnImportFavorites').addEventListener('click', () => {
-    document.getElementById('importFileInput').click();
+  $('btnExportFavorites').addEventListener('click', exportFavorites);
+  $('btnImportFavorites').addEventListener('click', () => {
+    $('importFileInput').click();
   });
-  document.getElementById('importFileInput').addEventListener('change', e => {
+  $('importFileInput').addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) readImportFile(file);
     e.target.value = '';
   });
 
   // Import modal buttons
-  document.getElementById('importOverlay').addEventListener('click',    cancelImport);
-  document.getElementById('btnImportCancel').addEventListener('click',  cancelImport);
-  document.getElementById('btnImportMerge').addEventListener('click',   () => confirmImport('merge'));
-  document.getElementById('btnImportReplace').addEventListener('click', () => confirmImport('replace'));
+  $('importOverlay').addEventListener('click',    cancelImport);
+  $('btnImportCancel').addEventListener('click',  cancelImport);
+  $('btnImportMerge').addEventListener('click',   () => confirmImport('merge'));
+  $('btnImportReplace').addEventListener('click', () => confirmImport('replace'));
 }
 
 // =============================================================
@@ -1123,8 +1184,8 @@ function removeCustomBg(index) {
 // =============================================================
 
 function saveFavorite() {
-  const input   = document.getElementById('favNameInput');
-  const errorEl = document.getElementById('favNameError');
+  const input   = $('favNameInput');
+  const errorEl = $('favNameError');
   const name    = input.value.trim();
 
   if (!name) {
@@ -1153,14 +1214,7 @@ function saveFavorite() {
     name,
     text:          state.text,
     backgroundUrl,
-    fontSize:      state.fontSize,
-    textColor:     state.textColor,
-    shadowColor:   state.shadowColor,
-    positionX:     state.positionX,
-    positionY:     state.positionY,
-    textAlign:     state.textAlign,
-    ratio:         state.ratio,
-    effect:        state.effect,
+    ...pick(state, STYLE_KEYS),
   });
 
   persistFavorites();
@@ -1189,18 +1243,7 @@ function loadFavorite(id) {
     }
   }
 
-  setState({
-    text:            fav.text,
-    backgroundIndex: bgIndex,
-    fontSize:        fav.fontSize,
-    textColor:       fav.textColor,
-    shadowColor:     fav.shadowColor,
-    positionX:       fav.positionX,
-    positionY:       fav.positionY,
-    textAlign:       fav.textAlign,
-    ratio:           fav.ratio,
-    effect:          fav.effect,
-  });
+  setState({ text: fav.text, backgroundIndex: bgIndex, ...pick(fav, STYLE_KEYS) });
 }
 
 function deleteFavorite(id) {
@@ -1275,7 +1318,7 @@ function readImportFile(file) {
     }
 
     _pendingImport = { valid, skipped, bgs };
-    document.getElementById('importSummary').textContent = skipped > 0
+    $('importSummary').textContent = skipped > 0
       ? `${valid.length} valid, ${skipped} skipped`
       : `${valid.length} favorite(s) to import`;
     openImportModal();
@@ -1285,12 +1328,12 @@ function readImportFile(file) {
 
 function openImportModal() {
   _modalOpener = document.activeElement;
-  document.getElementById('importModal').hidden = false;
-  document.getElementById('btnImportMerge').focus();
+  $('importModal').hidden = false;
+  $('btnImportMerge').focus();
 }
 
 function closeImportModal() {
-  document.getElementById('importModal').hidden = true;
+  $('importModal').hidden = true;
   _modalOpener?.focus?.();
   _modalOpener = null;
 }
@@ -1401,8 +1444,8 @@ async function renderCardToCanvas() {
 }
 
 async function exportPNG() {
-  const btn     = document.getElementById('btnDownload');
-  const overlay = document.getElementById('downloadOverlay');
+  const btn     = $('btnDownload');
+  const overlay = $('downloadOverlay');
   btn.disabled   = true;
   overlay.hidden = false;
 

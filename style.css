@@ -121,7 +121,9 @@ main {
 
 /* The card is a size container: text size and shadow are in cqw (% of card
    width), so the card looks the same at any screen size and matches the export.
-   --ar, --ar-n, --fs, --text-color and --shadow-color are set by renderCard().
+   --em, --shadow-offset, --outline-width, --line-height and --text-box come from the
+   constants in app.js (applyCardMetrics); --ar, --ar-n, --fs, --text-color and
+   --shadow-color are set by renderCard().
    The frame is a box-shadow, not a border, so it does not change the card's size. */
 #timeCard {
   --ar: 16 / 9;
@@ -147,22 +149,21 @@ main {
 
 .text-wrapper {
   position: absolute;
-  width: 90%;
+  width: var(--text-box);
   transform: translate(-50%, -50%);
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  line-height: 1.2;
-  font-size: calc(var(--fs, 3) * 16px);                 /* fallback: no container units */
-  font-size: calc(var(--fs, 3) * 1.7778cqw);            /* 1em = 16px on a 900px card */
+  line-height: var(--line-height);
+  font-size: calc(var(--fs) * var(--em));
   color: var(--text-color);
-  text-shadow: 0.2222cqw 0.2222cqw 0 var(--shadow-color),
-              -0.2222cqw -0.2222cqw 0 var(--shadow-color);
+  text-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color),
+               calc(var(--shadow-offset) * -1) calc(var(--shadow-offset) * -1) 0 var(--shadow-color);
   /* left, top, text-align set by renderCard() */
 }
 
 #timeCard.fx-outline .text-wrapper {
   text-shadow: none;
-  -webkit-text-stroke: 0.4444cqw var(--shadow-color);
+  -webkit-text-stroke: var(--outline-width) var(--shadow-color);
   paint-order: stroke fill;
 }
 
@@ -189,16 +190,6 @@ main {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ============================================================
-   Card hint
-   ============================================================ */
-.card-hint {
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--sea-light);
-  margin-top: -0.25rem;
-}
 
 /* ============================================================
    Background strip
@@ -263,7 +254,10 @@ main {
 
 .btn-bg-upload {
   flex-shrink: 0;
-  width: 40px;
+  position: sticky;                 /* stays in view while the strip scrolls */
+  left: 0.5rem;
+  z-index: 1;
+  width: 64px;
   height: 40px;
   background: var(--cream);
   border-style: dashed;
@@ -571,6 +565,7 @@ input[type="color"] {
   main { padding: 0.5rem 0.75rem 1rem; gap: 0.75rem; }
   .app-title { font-size: 1.3rem; }
   .thumbnail { width: 52px; height: 32px; }
+  .btn-bg-upload { width: 52px; height: 32px; }
   #advancedPanel { grid-template-columns: repeat(2, 1fr); }
   #textRow { flex-wrap: wrap; }
   #textInput { flex-basis: 100%; }

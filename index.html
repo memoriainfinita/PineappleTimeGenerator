@@ -30,6 +30,7 @@
     <!-- Card preview -->
     <div id="cardContainer">
       <div id="timeCard" tabindex="0" role="group"
+           title="Drag to move the text. With the card focused, the arrow keys move it (Shift for bigger steps)."
            aria-label="Time card. Drag the text or use the arrow keys to move it; Shift moves it further.">
         <!-- .text-wrapper injected by render() -->
       </div>
@@ -39,55 +40,56 @@
       </div>
     </div>
 
-    <p class="card-hint">Drag to reposition text</p>
-
     <!-- Background strip -->
     <div id="bgStrip">
+      <button id="btnBgUpload" class="btn-bg-upload" aria-label="Upload background"
+              title="Upload your own background (the last 5 are kept)">+</button>
+      <input type="file" id="bgUploadInput" accept="image/*" aria-label="Background image" hidden>
       <!-- thumbnails injected by renderStrip() -->
-      <input type="file" id="bgUploadInput" accept="image/*" hidden>
-      <button id="btnBgUpload" class="btn-bg-upload" aria-label="Upload background">+</button>
     </div>
 
     <!-- Text row -->
     <div id="textRow">
-      <textarea id="textInput" rows="1" placeholder="Type your text..." aria-label="Card text"></textarea>
-      <button id="btnRandom" title="Random phrase">Phrase ↺</button>
-      <button id="btnRandomBg" title="Random background">Background ↺</button>
-      <button id="btnRandomColors" title="Random colors">Colors ↺</button>
+      <textarea id="textInput" rows="1" placeholder="Type your text..." aria-label="Card text"
+                title="Card text. Enter adds a new line."></textarea>
+      <button id="btnRandom" title="Pick a random phrase">Phrase ↺</button>
+      <button id="btnRandomBg" title="Pick a random background">Background ↺</button>
+      <button id="btnRandomColors" title="Pick text and shadow colors that read well over the part of the background behind the text">Colors ↺</button>
       <button id="btnDownload" title="Download PNG">Download ↓</button>
     </div>
 
     <!-- Advanced panel -->
     <div id="advancedSection">
-      <button id="btnToggleAdvanced" class="btn-toggle-advanced" aria-expanded="false" aria-controls="advancedPanel">▼ Customize</button>
+      <button id="btnToggleAdvanced" class="btn-toggle-advanced" aria-expanded="false" aria-controls="advancedPanel"
+              title="Show or hide the customize panel (Esc closes it)">▼ Customize</button>
       <div id="advancedPanel" hidden>
 
         <div class="panel-section" id="sectionColors">
           <span class="panel-label">Colors</span>
-          <label class="color-label">Text <input type="color" id="colorText" value="#5c2e0d"></label>
-          <label class="color-label">Shadow <input type="color" id="colorShadow" value="#ffe566"></label>
+          <label class="color-label" title="Text color">Text <input type="color" id="colorText" value="#5c2e0d"></label>
+          <label class="color-label" title="Shadow color, also used for the outline">Shadow <input type="color" id="colorShadow" value="#ffe566"></label>
           <div class="seg-group" role="group" aria-label="Text effect">
-            <button class="btn-seg" data-effect="shadow">Shadow</button>
-            <button class="btn-seg" data-effect="outline">Outline</button>
+            <button class="btn-seg" data-effect="shadow" title="Offset shadow behind the text">Shadow</button>
+            <button class="btn-seg" data-effect="outline" title="Outline around the text">Outline</button>
           </div>
         </div>
 
         <div class="panel-section" id="sectionSize">
           <span class="panel-label">Text size</span>
-          <button id="btnFontMinus" class="btn-font-step" aria-label="Smaller text">−</button>
+          <button id="btnFontMinus" class="btn-font-step" aria-label="Smaller text" title="Smaller text">−</button>
           <span id="fontSizeDisplay">3.0em</span>
-          <button id="btnFontPlus"  class="btn-font-step" aria-label="Larger text">+</button>
-          <input type="range" id="sliderFontSize" min="0.5" max="8" step="0.1" value="3" aria-label="Text size">
+          <button id="btnFontPlus"  class="btn-font-step" aria-label="Larger text" title="Larger text">+</button>
+          <input type="range" id="sliderFontSize" min="0.5" max="8" step="0.1" value="3" aria-label="Text size" title="Text size">
         </div>
 
         <div class="panel-section" id="sectionPosition">
           <span class="panel-label">Align</span>
           <div class="seg-group" role="group" aria-label="Text alignment">
-            <button class="btn-seg" data-align="left"   aria-label="Align left">L</button>
-            <button class="btn-seg" data-align="center" aria-label="Align center">C</button>
-            <button class="btn-seg" data-align="right"  aria-label="Align right">R</button>
+            <button class="btn-seg" data-align="left"   aria-label="Align left"   title="Align left (shows on several lines)">L</button>
+            <button class="btn-seg" data-align="center" aria-label="Align center" title="Align center (shows on several lines)">C</button>
+            <button class="btn-seg" data-align="right"  aria-label="Align right"  title="Align right (shows on several lines)">R</button>
           </div>
-          <button id="btnResetPosition" class="btn-reset">Reset</button>
+          <button id="btnResetPosition" class="btn-reset" title="Move the text back to the center">Reset</button>
         </div>
 
         <div class="panel-section" id="sectionRatio">
@@ -98,20 +100,21 @@
             <button class="btn-seg" data-ratio="9:16">9:16</button>
             <button class="btn-seg" data-ratio="1:1">1:1</button>
           </div>
-          <label class="check-label"><input type="checkbox" id="chkTransparent"> Transparent PNG (text only)</label>
+          <label class="check-label" title="Export only the text on a transparent background, to lay over a clip in your editor"><input type="checkbox" id="chkTransparent"> Transparent PNG</label>
         </div>
 
         <div class="panel-section" id="favoritesSection">
           <span class="panel-label">Favorites</span>
           <div class="fav-save-row">
-            <input type="text" id="favNameInput" placeholder="Favorite name" maxlength="80" aria-label="Favorite name">
-            <button id="btnSaveFavorite" class="btn-save-fav">Save</button>
+            <input type="text" id="favNameInput" placeholder="Favorite name" maxlength="80" aria-label="Favorite name"
+                   title="Name for this favorite">
+            <button id="btnSaveFavorite" class="btn-save-fav" title="Save the current card as a favorite (Ctrl+S)">Save</button>
           </div>
           <span id="favNameError" class="fav-error" role="alert" hidden>Enter a name</span>
           <div id="favoritesList"></div>
           <div class="fav-io-row">
-            <button id="btnExportFavorites" class="btn-export-fav">Export JSON</button>
-            <button id="btnImportFavorites" class="btn-import-fav">Import JSON</button>
+            <button id="btnExportFavorites" class="btn-export-fav" title="Download your favorites as a JSON file">Export JSON</button>
+            <button id="btnImportFavorites" class="btn-import-fav" title="Load favorites from a JSON file">Import JSON</button>
             <input type="file" id="importFileInput" accept=".json" aria-label="Favorites file" hidden>
           </div>
         </div>
@@ -128,9 +131,9 @@
       <h2 id="importTitle">Import favorites</h2>
       <p id="importSummary"></p>
       <div class="modal-buttons">
-        <button id="btnImportMerge"   class="btn-merge">Merge</button>
-        <button id="btnImportReplace" class="btn-replace">Replace</button>
-        <button id="btnImportCancel"  class="btn-cancel-modal">Cancel</button>
+        <button id="btnImportMerge"   class="btn-merge"   title="Add the imported favorites to yours; ones you already have are skipped">Merge</button>
+        <button id="btnImportReplace" class="btn-replace" title="Replace all your favorites with the imported ones">Replace</button>
+        <button id="btnImportCancel"  class="btn-cancel-modal" title="Close without importing (Esc)">Cancel</button>
       </div>
     </div>
   </div>

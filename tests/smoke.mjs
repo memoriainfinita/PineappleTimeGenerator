@@ -94,7 +94,19 @@ try {
   check('thumbnails are buttons', await page.locator('button.thumbnail').count() === 15);
   check('strip shows small thumbs, not the full images',
     (await page.locator('.thumbnail').first().evaluate(e => e.style.backgroundImage)).includes('thumbs/'));
-  await page.waitForTimeout(500);
+  check('no explanatory hint under the card', await page.locator('.card-hint').count() === 0);
+  check('upload button is the first item of the strip', await page.locator('#bgStrip > :first-child').getAttribute('id') === 'btnBgUpload');
+  await page.evaluate(() => { const s = document.getElementById('bgStrip'); s.scrollLeft = s.scrollWidth; });
+  await page.waitForTimeout(200);
+  const stripBox = await page.locator('#bgStrip').boundingBox();
+  const upBox = await page.locator('#btnBgUpload').boundingBox();
+  check('upload button stays visible with the strip scrolled to the end',
+    upBox.x >= stripBox.x - 1 && upBox.x + upBox.width <= stripBox.x + stripBox.width + 1, JSON.stringify({ upBox, stripBox }));
+  await page.evaluate(() => { document.getElementById('bgStrip').scrollLeft = 0; });
+  const untitled = await page.evaluate(() => [...document.querySelectorAll('button, textarea, input[type=text], input[type=color], input[type=range], #timeCard, label.check-label')]
+    .filter(e => !e.closest('[title]')).map(e => e.id || e.className || e.tagName));
+  check('every control and the card has a tooltip', untitled.length === 0, untitled.join(', '));
+  await page.waitForTimeout(300);
   const colors0 = await S(() => ({ t: state.textColor, s: state.shadowColor }));
   check('colors are valid hex after autoAdjustColors', /^#[0-9a-f]{6}$/i.test(colors0.t) && /^#[0-9a-f]{6}$/i.test(colors0.s));
   check('no console errors on load', errors.length === 0, errors.join(' | '));
