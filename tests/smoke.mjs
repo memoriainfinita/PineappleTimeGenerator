@@ -96,13 +96,21 @@ try {
     (await page.locator('.thumbnail').first().evaluate(e => e.style.backgroundImage)).includes('thumbs/'));
   check('no explanatory hint under the card', await page.locator('.card-hint').count() === 0);
   check('upload button is the first item of the strip', await page.locator('#bgStrip > :first-child').getAttribute('id') === 'btnBgUpload');
-  await page.evaluate(() => { const s = document.getElementById('bgStrip'); s.scrollLeft = s.scrollWidth; });
+  await page.evaluate(() => { const s = document.getElementById('bgScroll'); s.scrollLeft = s.scrollWidth; });
   await page.waitForTimeout(200);
   const stripBox = await page.locator('#bgStrip').boundingBox();
   const upBox = await page.locator('#btnBgUpload').boundingBox();
   check('upload button stays visible with the strip scrolled to the end',
     upBox.x >= stripBox.x - 1 && upBox.x + upBox.width <= stripBox.x + stripBox.width + 1, JSON.stringify({ upBox, stripBox }));
-  await page.evaluate(() => { document.getElementById('bgStrip').scrollLeft = 0; });
+  const scrollBox = await page.locator('#bgScroll').boundingBox();
+  const onTop = await page.evaluate(() => {
+    const b = document.getElementById('btnBgUpload').getBoundingClientRect();
+    return [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.5]]
+      .every(([fx, fy]) => document.elementFromPoint(b.left + b.width * fx, b.top + b.height * fy)?.id === 'btnBgUpload');
+  });
+  check('thumbnails never cover the upload button, and the scroll area starts after it',
+    onTop && upBox.x + upBox.width <= scrollBox.x, JSON.stringify({ upBox, scrollBox }));
+  await page.evaluate(() => { document.getElementById('bgScroll').scrollLeft = 0; });
   const untitled = await page.evaluate(() => [...document.querySelectorAll('button, textarea, input[type=text], input[type=color], input[type=range], #timeCard, label.check-label')]
     .filter(e => !e.closest('[title]')).map(e => e.id || e.className || e.tagName));
   check('every control and the card has a tooltip', untitled.length === 0, untitled.join(', '));
