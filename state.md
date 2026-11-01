@@ -87,6 +87,7 @@ Key decisions:
 - 2026-10-31 (later): UI restyle, CSS only. Sea-blue page, sand panels, cream buttons with a hard offset shadow (same as the card text), sponge-yellow only for Download, Save, Merge and the selected option. Fredoka (Google Fonts) for the UI; title keeps Some Time Later. Smoke test unchanged and passing.
 - 2026-10-31 (later): Code cleanup and UI text. Removed dead `generateDarkColor/LightColor`; style fields derived from `STYLE_DEFAULTS`/`STYLE_VALIDATORS`; card constants injected into CSS as variables; render skips style and control updates on drag steps; cached control refs. Upload button moved to the start of the strip (sticky). Removed the "Drag to reposition text" hint and other explanatory text; every control and the card has a `title` tooltip (download and format tooltips show the export size). Not done: small thumbnails for custom backgrounds, splitting `smoke.mjs` into independent scenarios.
 - 2026-11-01: Fix: the sticky upload button covered thumbnails when the strip scrolled. The strip is now the upload button beside a separate scrolling `#bgScroll`; smoke test checks nothing covers the button.
+- 2026-11-01 (later): Fix: the upload button was lower than the thumbnails when the strip showed a scrollbar (centered in a taller box). Strip is now aligned by the top. Smoke test runs with real scrollbars and checks the button is level with the thumbnails.
 - 2026-09-24: Repo renamed from `PinnapleTimeGenerator` to `PineappleTimeGenerator` (typo). GitHub redirects the repo; the old Pages URL returns 404.
 
 ## TODO

@@ -61,7 +61,8 @@ function makePng(w, h, [r, g, b]) {
 const pngSize = buf => ({ w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) });
 
 // --- run -------------------------------------------------------------------
-const browser = await chromium.launch();
+// Real scrollbars (headless hides them by default): a visible one changes the strip's height
+const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
 const page = await context.newPage();
 
@@ -108,6 +109,9 @@ try {
     return [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.5]]
       .every(([fx, fy]) => document.elementFromPoint(b.left + b.width * fx, b.top + b.height * fy)?.id === 'btnBgUpload');
   });
+  const tops = await page.evaluate(() => [document.getElementById('btnBgUpload'), document.querySelector('.thumbnail')]
+    .map(e => e.getBoundingClientRect().top));
+  check('upload button is level with the thumbnails', Math.abs(tops[0] - tops[1]) < 0.1, JSON.stringify(tops));
   check('thumbnails never cover the upload button, and the scroll area starts after it',
     onTop && upBox.x + upBox.width <= scrollBox.x, JSON.stringify({ upBox, scrollBox }));
   await page.evaluate(() => { document.getElementById('bgScroll').scrollLeft = 0; });
