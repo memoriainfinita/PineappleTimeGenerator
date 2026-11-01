@@ -194,12 +194,22 @@ main {
 /* ============================================================
    Background strip
    ============================================================ */
+/* The upload button sits beside the scrolling thumbnails, never over them */
 #bgStrip {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 0 0.6rem;
+}
+
+#bgScroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
-  padding: 0.5rem 0.5rem 0.6rem;
+  padding: 0.5rem 0.5rem 0.6rem;     /* room for the hard shadows the scroll box would clip */
   scrollbar-width: thin;
   scrollbar-color: var(--outline) transparent;
 }
@@ -254,9 +264,6 @@ main {
 
 .btn-bg-upload {
   flex-shrink: 0;
-  position: sticky;                 /* stays in view while the strip scrolls */
-  left: 0.5rem;
-  z-index: 1;
   width: 64px;
   height: 40px;
   background: var(--cream);

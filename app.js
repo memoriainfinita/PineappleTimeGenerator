@@ -497,7 +497,7 @@ function persistFavBgs()    { saveToLS(LS_FAV_BGS, favBgs); }
 // =============================================================
 
 // DOM refs — populated in init() after DOMContentLoaded
-let _card, _strip, _textarea;
+let _card, _strip, _scroll, _textarea;
 
 let _renderedBg   = null;
 let _renderedText = null;
@@ -570,7 +570,7 @@ function renderStrip() {
   const focusedIdx = _strip.contains(document.activeElement)
     ? document.activeElement.dataset.index : undefined;
 
-  // Remove existing thumbnails and separators; the upload button stays first
+  // Remove existing thumbnails and separators
   _strip.querySelectorAll('.thumbnail-wrapper, .strip-separator').forEach(el => el.remove());
 
   const hasCustom = state.customBackgrounds.length > 0;
@@ -580,7 +580,7 @@ function renderStrip() {
     if (hasCustom && i === state.customBackgrounds.length) {
       const sep = document.createElement('div');
       sep.className = 'strip-separator';
-      _strip.appendChild(sep);
+      _scroll.appendChild(sep);
     }
 
     const wrapper = document.createElement('div');
@@ -607,7 +607,7 @@ function renderStrip() {
       wrapper.appendChild(rmBtn);
     }
 
-    _strip.appendChild(wrapper);
+    _scroll.appendChild(wrapper);
   });
 
   if (focusedIdx !== undefined) {
@@ -839,6 +839,7 @@ function init() {
   // DOM refs
   _card     = $('timeCard');
   _strip    = $('bgStrip');
+  _scroll   = $('bgScroll');
   _textarea = $('textInput');
   applyCardMetrics();
   for (const btn of controls().seg.ratio) {
